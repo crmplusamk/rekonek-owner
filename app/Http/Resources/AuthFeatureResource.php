@@ -19,7 +19,9 @@ class AuthFeatureResource extends JsonResource
             "feature_key" => $this->key,
             "visiblity" => $this->pivot->visiblity,
             "included" => $this->pivot->included,
-            "limit" => $this->pivot->limit == null ? $this->pivot->limit : $this->pivot->limit + ($this->addon?->subscriptionAddons[0]?->charge ?? 0),
+            "limit" => $this->pivot->limit == null || !is_numeric($this->pivot->limit)
+                ? null
+                : $this->pivot->limit + ($this->addon?->subscriptionAddons[0]?->charge ?? 0),
             "limit_type" => $this->pivot->limit_type,
             "has_addon" => isset($this->addon->subscriptionAddons[0]) ? true : false
         ];
