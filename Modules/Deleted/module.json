@@ -1,0 +1,11 @@
+{
+    "name": "Deleted",
+    "alias": "deleted",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Deleted\\App\\Providers\\DeletedServiceProvider"
+    ],
+    "files": []
+}

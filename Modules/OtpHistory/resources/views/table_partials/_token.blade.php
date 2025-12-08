@@ -1,0 +1,1 @@
+<div>{{ $otp->token }}</div>

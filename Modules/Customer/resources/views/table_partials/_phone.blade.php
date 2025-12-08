@@ -1,0 +1,1 @@
+<p>{{ $customer->phone ?? '-' }}</p>

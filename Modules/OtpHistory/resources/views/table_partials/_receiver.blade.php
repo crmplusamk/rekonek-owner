@@ -1,0 +1,1 @@
+<div>{{ $otp->receiver }}</div>

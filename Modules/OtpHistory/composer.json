@@ -1,0 +1,31 @@
+{
+    "name": "nwidart/otphistory",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\OtpHistory\\": "",
+            "Modules\\OtpHistory\\App\\": "app/",
+            "Modules\\OtpHistory\\Database\\Factories\\": "database/factories/",
+            "Modules\\OtpHistory\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\OtpHistory\\Tests\\": "tests/"
+        }
+    }
+}

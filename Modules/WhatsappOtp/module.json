@@ -1,0 +1,11 @@
+{
+    "name": "WhatsappOtp",
+    "alias": "whatsappotp",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\WhatsappOtp\\App\\Providers\\WhatsappOtpServiceProvider"
+    ],
+    "files": []
+}

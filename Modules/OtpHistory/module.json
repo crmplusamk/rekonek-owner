@@ -1,0 +1,11 @@
+{
+    "name": "OtpHistory",
+    "alias": "otphistory",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\OtpHistory\\App\\Providers\\OtpHistoryServiceProvider"
+    ],
+    "files": []
+}

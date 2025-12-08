@@ -1,0 +1,31 @@
+{
+    "name": "nwidart/privilege",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Privilege\\": "",
+            "Modules\\Privilege\\App\\": "app/",
+            "Modules\\Privilege\\Database\\Factories\\": "database/factories/",
+            "Modules\\Privilege\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Privilege\\Tests\\": "tests/"
+        }
+    }
+}

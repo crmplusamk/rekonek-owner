@@ -1,0 +1,31 @@
+{
+    "name": "nwidart/whatsappotp",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\WhatsappOtp\\": "",
+            "Modules\\WhatsappOtp\\App\\": "app/",
+            "Modules\\WhatsappOtp\\Database\\Factories\\": "database/factories/",
+            "Modules\\WhatsappOtp\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\WhatsappOtp\\Tests\\": "tests/"
+        }
+    }
+}

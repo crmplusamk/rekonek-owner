@@ -1,0 +1,31 @@
+{
+    "name": "nwidart/developeraccess",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\DeveloperAccess\\": "",
+            "Modules\\DeveloperAccess\\App\\": "app/",
+            "Modules\\DeveloperAccess\\Database\\Factories\\": "database/factories/",
+            "Modules\\DeveloperAccess\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\DeveloperAccess\\Tests\\": "tests/"
+        }
+    }
+}

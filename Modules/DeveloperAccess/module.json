@@ -1,0 +1,11 @@
+{
+    "name": "DeveloperAccess",
+    "alias": "developeraccess",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\DeveloperAccess\\App\\Providers\\DeveloperAccessServiceProvider"
+    ],
+    "files": []
+}

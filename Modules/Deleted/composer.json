@@ -1,0 +1,31 @@
+{
+    "name": "nwidart/deleted",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Deleted\\": "",
+            "Modules\\Deleted\\App\\": "app/",
+            "Modules\\Deleted\\Database\\Factories\\": "database/factories/",
+            "Modules\\Deleted\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Deleted\\Tests\\": "tests/"
+        }
+    }
+}

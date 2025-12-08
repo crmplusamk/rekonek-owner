@@ -1,0 +1,6 @@
+<?php
+
+return [
+    'WEBHOOK_WHATSAPP_SERVICE_V2_URL' => env('WEBHOOK_WHATSAPP_SERVICE_V2_URL')
+];
+
