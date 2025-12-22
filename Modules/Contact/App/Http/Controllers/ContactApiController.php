@@ -102,7 +102,7 @@ class ContactApiController extends Controller
                 'customer_id' => $customer->id,
                 'is_active' => true,
                 'started_at' => now(),
-                'expired_at' => now()->addMonth(),
+                'expired_at' => now()->addDays(14),
                 'company_id' => $customer->company_id
             ]);
 

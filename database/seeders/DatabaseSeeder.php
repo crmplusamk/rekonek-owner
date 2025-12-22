@@ -10,6 +10,7 @@ use Modules\Package\Database\Seeders\PackageDatabaseSeeder;
 use Modules\Package\Database\Seeders\PackageFeatureDatabaseSeeder;
 use Modules\Privilege\Database\Seeders\PrivilegeDatabaseSeeder;
 use Modules\User\Database\Seeders\UserDatabaseSeeder;
+use Modules\Referral\Database\Seeders\ReferralDatabaseSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -24,7 +25,8 @@ class DatabaseSeeder extends Seeder
             FeatureDatabaseSeeder::class,
             PackageDatabaseSeeder::class,
             PackageFeatureDatabaseSeeder::class,
-            ContactDatabaseSeeder::class
+            ContactDatabaseSeeder::class,
+            ReferralDatabaseSeeder::class
             // PackageFeatureSeeder::class,
             // AddonSeeder::class,
         ]);

@@ -17,6 +17,10 @@ class SubscriptionAddonResource extends JsonResource
         $edate = Carbon::parse($this->expired_at);
         $diff = $sdate->diffInDays($edate);
 
+        // Addon price is already per month, so total = charge × price (not multiplied by days)
+        // charge = quantity of addon units, price = price per unit per month
+        $total = $this->charge * $this->addon->price;
+
         return [
             'id' => $this->id,
             'addon_id' => $this->addon->id,
@@ -27,7 +31,7 @@ class SubscriptionAddonResource extends JsonResource
             'start_date' => $this->started_at,
             'end_date' => $this->expired_at,
             'days' => $diff,
-            'total' => $this->charge * $diff * $this->addon->price,
+            'total' => $total,
             'is_active' => $this->is_active,
         ];
     }

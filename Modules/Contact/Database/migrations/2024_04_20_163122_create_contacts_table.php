@@ -22,18 +22,27 @@ return new class extends Migration
             $table->string('login_password')->nullable();
             $table->boolean('is_customer')->nullable();
             $table->boolean('is_active')->nullable();
-            $table->string('referral_code')->nullable();
+            $table->string('referral_code', 50)->nullable();
             $table->string('verification_code')->nullable();
             $table->timestamps();
 
-            $table->foreign('referral_code')->references('code')->on('referrals')->onDelete('set null');
-
+            // Indexes
             $table->index('company_id', 'company_id_index', 'hash');
             $table->index('is_customer', 'is_customer_index', 'hash');
             $table->index('is_active', 'is_active_index', 'hash');
             $table->index('referral_code', 'referral_code_index', 'hash');
             $table->index('verification_code', 'verification_code_index', 'hash');
         });
+
+        // Add foreign key after table is created (to ensure referrals table exists)
+        if (Schema::hasTable('referrals')) {
+            Schema::table('contacts', function (Blueprint $table) {
+                $table->foreign('referral_code')
+                    ->references('code')
+                    ->on('referrals')
+                    ->onDelete('set null');
+            });
+        }
     }
 
     /**
@@ -41,6 +50,13 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Drop foreign key first if exists
+        if (Schema::hasTable('contacts')) {
+            Schema::table('contacts', function (Blueprint $table) {
+                $table->dropForeign(['referral_code']);
+            });
+        }
+
         Schema::dropIfExists('contacts');
     }
 };

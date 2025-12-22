@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Modules\Referral\App\Http\Controllers\Api\ReferralApiController;
 
 /*
     |--------------------------------------------------------------------------
@@ -14,6 +14,14 @@ use Illuminate\Support\Facades\Route;
     |
 */
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->name('api.')->group(function () {
-    Route::get('referral', fn (Request $request) => $request->user())->name('referral');
+Route::prefix('v1/referral')->name('api.referral.')->group(function () {
+    // Public endpoints (no auth required for checking referral codes)
+    Route::post('check', [ReferralApiController::class, 'check'])->name('check');
+    Route::post('calculate', [ReferralApiController::class, 'calculate'])->name('calculate');
+    Route::get('available', [ReferralApiController::class, 'available'])->name('available');
+    
+    // Protected endpoints (require auth for usage tracking)
+    Route::middleware(['auth:sanctum'])->group(function () {
+        Route::post('use', [ReferralApiController::class, 'use'])->name('use');
+    });
 });

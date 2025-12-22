@@ -10,17 +10,14 @@ class PackageService
 
     public function calculateTotal($subtotal)
     {
-        $service_fee = 2000;
-        $admin_fee = 10000;
         $tax = 11;
 
-        $tax_amount = ($subtotal + $service_fee + $admin_fee) * $tax / 100;
-        $total = $subtotal + $service_fee + $admin_fee + $tax_amount;
+        // Tax is calculated only from subtotal
+        $tax_amount = $subtotal * $tax / 100;
+        $total = $subtotal + $tax_amount;
 
         return [
             "subtotal" => $subtotal,
-            "admin_fee" => $admin_fee,
-            "service_fee" => $service_fee,
             "tax" => $tax,
             "tax_amount" => $tax_amount,
             "total" => $total,
@@ -34,7 +31,17 @@ class PackageService
 
     public function packageItem($data, $item)
     {
-        $price = $item['total'];
+        // Use price from frontend if available (price per unit)
+        // Otherwise use total (for backward compatibility, but total should be price * quantity)
+        if (isset($item['price'])) {
+            $price = $item['price'];
+        } else {
+            // If only total is provided, calculate price per unit
+            $price = isset($item['quantity']) && $item['quantity'] > 0 
+                ? $item['total'] / $item['quantity'] 
+                : $item['total'];
+        }
+        
         $subtotal = $price * $item['quantity'];
 
         return [
@@ -47,33 +54,44 @@ class PackageService
             'quantity' => $item['quantity'],
             'charge' => null,
             'capital_price' => $data->price,
-            'price' => $item['total'],
+            'price' => $price,
             'subtotal' => $subtotal
         ];
     }
 
     public function addonItem($data, $item)
     {
-        $price = $data->price * $item['duration'];
-        $subtotal = $price * $item['quantity'] ;
-        $additionalTotal = isset($item['additionalDay']) && isset($item['additionalCharge']) ? $item['additionalDay'] * $item['additionalCharge'] * $data->price : 0;
+        // Addon price follows termin: monthly price for month, yearly price (monthly * 12) for year
+        // The price from frontend already includes the calculation (monthly or yearly)
+        // Use price from frontend if available, otherwise calculate from total
+        if (isset($item['price'])) {
+            $price = $item['price'];
+        } elseif (isset($item['total']) && isset($item['quantity']) && $item['quantity'] > 0) {
+            // Calculate price per unit from total
+            $price = $item['total'] / $item['quantity'];
+        } else {
+            // Fallback to database price (should not happen if frontend sends correctly)
+            $price = $data->price;
+        }
+        
+        $subtotal = $price * $item['quantity'];
+
+        // Duration follows termin: 1 month or 1 year
+        $duration = $item['duration'] ?? 1;
+        $durationType = $item['duration_type'] ?? ($item['termin'] ?? 'month');
 
         return [
             'modelable_id' => $data->id,
             'modelable_type' => Addon::class,
-            'duration' => $item['termin_duration'],
-            'duration_type' => $item['termin'],
+            'duration' => $duration,
+            'duration_type' => $durationType,
             'start_date' => now(),
-            'end_date' => now()->add($this->termin($item['termin']), $item['termin_duration']),
+            'end_date' => now()->add($this->termin($durationType), $duration),
             'quantity' => $item['quantity'],
             'charge' => $data->charge * $item['quantity'],
             'capital_price' => $data->price,
             'price' => $price,
-            'subtotal' => $subtotal + $additionalTotal,
-            'additional_duration' => isset($item['additionalDay']) ? $item['additionalDay'] : null,
-            'additional_duration_type' => isset($item['additionalDay']) ? 'day' : null,
-            'additional_charge' => isset($item['additionalCharge']) ? $item['additionalCharge'] : null,
-            'additional_total' => $additionalTotal ?? null
+            'subtotal' => $subtotal
         ];
     }
 }

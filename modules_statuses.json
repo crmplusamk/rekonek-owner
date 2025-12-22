@@ -20,5 +20,6 @@
     "Payment": true,
     "Deleted": true,
     "Checkout": true,
-    "Logs": true
+    "Logs": true,
+    "Voucher": true
 }

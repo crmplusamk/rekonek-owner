@@ -29,6 +29,7 @@ class MidtransService
         $items = [];
         $items = $this->invoiceItems($items, $invoice);
         $items = $this->fee($items, $invoice);
+        $items = $this->discount($items, $invoice);
 
         $params = [
             "transaction_details" => [
@@ -93,18 +94,6 @@ class MidtransService
     {
         $fees = [
             [
-                "id" => "SF01",
-                "name" => "Service Fee",
-                "price" => $invoice->service_fee,
-                "quantity" => 1,
-            ],
-            [
-                "id" => "ADM01",
-                "name" => "Admin Fee",
-                "price" => $invoice->admin_fee,
-                "quantity" => 1,
-            ],
-            [
                 "id" => "TX01",
                 "name" => "PPN ".$invoice->tax."%",
                 "price" => $invoice->tax_amount,
@@ -114,6 +103,21 @@ class MidtransService
 
         foreach ($fees as $fee) {
             $items[] = $fee;
+        }
+
+        return $items;
+    }
+
+    public function discount($items, $invoice)
+    {
+        // Add referral discount as negative item if exists
+        if ($invoice->discount_amount > 0 && $invoice->referral_code) {
+            $items[] = [
+                "id" => "DISC01",
+                "name" => "Diskon Referral ({$invoice->referral_code})",
+                "price" => -$invoice->discount_amount, // Negative price for discount
+                "quantity" => 1,
+            ];
         }
 
         return $items;

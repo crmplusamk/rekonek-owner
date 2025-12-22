@@ -31,6 +31,7 @@ class InvoiceRepository
             'service_fee' => $request['service_fee'],
             'subtotal' => $request['subtotal'],
             'total' => $request['total'],
+            'type' => $request['type'] ?? 'new',
             'is_status' => $request['is_status'],
             'is_paid' => $request['is_paid'],
             'payment_date' => $request['payment_date'],

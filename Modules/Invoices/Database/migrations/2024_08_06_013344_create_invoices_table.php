@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('customer_email')->nullable();
             $table->string('customer_phone')->nullable();
             $table->longText('customer_address')->nullable();
+            $table->string('type')->nullable()->comment('new: pembelian baru, renew: perpanjangan, addon: tambahan');
             $table->timestamp('date')->nullable();
             $table->timestamp('due_date')->nullable();
             $table->integer("tax")->nullable();

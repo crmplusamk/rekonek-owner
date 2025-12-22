@@ -16,6 +16,7 @@ return new class extends Migration
             $table->uuid("feature_id")->nullable();
             $table->string("name")->nullable();
             $table->longText("description")->nullable();
+            $table->bigInteger("quantity")->nullable();
             $table->bigInteger("charge")->nullable();
             $table->decimal('price', 15);
             $table->boolean('is_active')->nullable();

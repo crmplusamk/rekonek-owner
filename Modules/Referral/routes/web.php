@@ -14,6 +14,8 @@ use Modules\Referral\App\Http\Controllers\ReferralController;
 |
 */
 
-Route::group([], function () {
+Route::middleware('auth')->group(function () {
+    Route::get('referral/get-datatable', [ReferralController::class, 'datatable'])->name('referral.table');
+    Route::get('referral/status/{id}', [ReferralController::class, 'status'])->name('referral.status');
     Route::resource('referral', ReferralController::class)->names('referral');
 });

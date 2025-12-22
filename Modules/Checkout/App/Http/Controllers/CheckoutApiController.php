@@ -15,6 +15,10 @@ use Modules\Logs\App\Services\LogService;
 use Modules\Package\App\Repositories\PackageRepository;
 use Modules\Package\App\Services\PackageService;
 use Modules\Payment\App\Repositories\PaymentRepository;
+use Modules\Referral\App\Models\Referral;
+use Modules\Referral\App\Models\ReferralUsage;
+use Modules\Subscription\App\Models\SubscriptionAddon;
+use Modules\Subscription\App\Models\SubscriptionPackage;
 use Modules\Subscription\App\Services\SubscriptionService;
 
 class CheckoutApiController extends Controller
@@ -67,6 +71,37 @@ class CheckoutApiController extends Controller
 
             /** calculate price */
             $calculate = $this->packageSrv->calculateTotal($subtotal);
+            
+            /** process referral code if provided */
+            $referralCode = null;
+            $referralDiscount = 0;
+            $referralId = null;
+            
+            if ($request->has('referral_code') && $request->referral_code) {
+                $referral = Referral::where('code', strtoupper($request->referral_code))->first();
+                
+                if ($referral && $referral->isAvailable()) {
+                    // Check if customer/company can use this referral code
+                    if ($referral->canBeUsedBy($customer->id, $request->company_id)) {
+                        // Calculate discount based on subtotal before tax
+                        $discountBase = $calculate['subtotal'];
+                        
+                        // Check min purchase requirement
+                        if (!$referral->min_purchase || $discountBase >= $referral->min_purchase) {
+                            $referralDiscount = $referral->calculateDiscount($discountBase);
+                            $referralCode = $referral->code;
+                            $referralId = $referral->id;
+                        }
+                    }
+                }
+            }
+            
+            // Apply referral discount to total calculation
+            $totalBeforeDiscount = $calculate['total'];
+            $finalTotal = max(0, $totalBeforeDiscount - $referralDiscount);
+
+            /** get invoice type from request, default to 'new' for package checkout */
+            $invoiceType = $request->input('type', 'new');
 
             /** create invoices */
             $invoice = $this->invoiceRepo->create([
@@ -81,12 +116,13 @@ class CheckoutApiController extends Controller
                 'tax_amount' => $calculate['tax_amount'],
                 'discount_percentage' => 0,
                 'discount_percentage_amount' => 0,
-                'discount_amount' => 0,
-                'referral_code' => null,
-                'admin_fee' => $calculate['admin_fee'],
-                'service_fee' => $calculate['service_fee'],
+                'discount_amount' => $referralDiscount,
+                'referral_code' => $referralCode,
+                'admin_fee' => 0,
+                'service_fee' => 0,
                 'subtotal' => $calculate['subtotal'],
-                'total' => $calculate['total'],
+                'total' => $finalTotal,
+                'type' => $invoiceType,
                 'is_status' => 1, /** terkonfirmasi */
                 'is_paid' => 0, /** belum dibayar */
                 'payment_date' => null,
@@ -162,6 +198,9 @@ class CheckoutApiController extends Controller
             /** calculate price */
             $calculate = $this->packageSrv->calculateTotal($subtotal);
 
+            /** get invoice type from request, default to 'addon' for addon checkout */
+            $invoiceType = $request->input('type', 'addon');
+
             /** create invoices */
             $invoice = $this->invoiceRepo->create([
                 'customer_id' => $customer->id,
@@ -177,10 +216,11 @@ class CheckoutApiController extends Controller
                 'discount_percentage_amount' => 0,
                 'discount_amount' => 0,
                 'referral_code' => null,
-                'admin_fee' => $calculate['admin_fee'],
-                'service_fee' => $calculate['service_fee'],
+                'admin_fee' => 0,
+                'service_fee' => 0,
                 'subtotal' => $calculate['subtotal'],
                 'total' => $calculate['total'],
+                'type' => $invoiceType,
                 'is_status' => 1, /** terkonfirmasi */
                 'is_paid' => 0, /** belum dibayar */
                 'payment_date' => null,
@@ -459,10 +499,79 @@ class CheckoutApiController extends Controller
             'company_id' => $invoice->company_id
         ]);
 
-        /** update subscription */
+        /** record referral usage if referral code was applied and payment is successful */
+        if ($invoice->referral_code && $invoice->discount_amount > 0) {
+            $referral = Referral::where('code', $invoice->referral_code)->first();
+            
+            if ($referral) {
+                // Get customer_id from invoice
+                $customerId = $invoice->customer_id ?? null;
+                
+                // Check if usage already recorded (prevent duplicate)
+                // Check by invoice_id in metadata to prevent duplicate recording
+                $existingUsage = ReferralUsage::where('referral_id', $referral->id)
+                    ->where('company_id', $invoice->company_id)
+                    ->get()
+                    ->filter(function($usage) use ($invoice) {
+                        $metadata = json_decode($usage->metadata, true);
+                        return isset($metadata['invoice_id']) && $metadata['invoice_id'] === $invoice->id;
+                    })
+                    ->first();
+                
+                if (!$existingUsage) {
+                    ReferralUsage::create([
+                        'referral_id' => $referral->id,
+                        'customer_id' => $customerId,
+                        'company_id' => $invoice->company_id,
+                        'contact_id' => $client->id ?? null,
+                        'purchase_amount' => $invoice->subtotal + $invoice->tax_amount, // Total before discount
+                        'discount_amount' => $invoice->discount_amount,
+                        'metadata' => json_encode([
+                            'invoice_id' => $invoice->id,
+                            'invoice_code' => $invoice->code,
+                            'payment_order_id' => $payment->order_id,
+                            'payment_date' => $paymentDate,
+                            'created_at' => now()->toDateTimeString(),
+                        ]),
+                    ]);
+                    
+                    // Increment used_count
+                    Referral::where('id', $referral->id)->increment('used_count');
+                    
+                    LogService::create([
+                        'fid' => $invoice->id,
+                        'category' => 'order',
+                        'title' => 'Referral Code Used',
+                        'note' => "Referral code {$invoice->referral_code} telah digunakan untuk invoice {$invoice->code}",
+                        'company_id' => $invoice->company_id
+                    ]);
+                }
+            }
+        }
+
+        /** update subscription based on invoice type */
+        $invoiceType = $invoice->type ?? 'new';
         $subsPackage = $invoice->items->where('itemable_type', 'Modules\Package\App\Models\Package')->first();
         $subsAddons = $invoice->items->where('itemable_type', 'Modules\Addon\App\Models\Addon')->all();
 
+        /** if type is 'new', delete all existing subscriptions (package + addon) first */
+        if ($invoiceType === 'new') {
+            // Delete all existing subscription packages
+            $deletedPackages = SubscriptionPackage::where('company_id', $invoice->company_id)->delete();
+            
+            // Delete all existing subscription addons
+            $deletedAddons = SubscriptionAddon::where('company_id', $invoice->company_id)->delete();
+
+            LogService::create([
+                'fid' => $invoice->id,
+                'category' => 'subscription',
+                'title' => 'Menghapus Langganan Lama',
+                'note' => "Menghapus semua langganan lama (paket: {$deletedPackages}, addon: {$deletedAddons}) untuk invoice {$invoice->code}",
+                'company_id' => $invoice->company_id
+            ]);
+        }
+
+        /** create/update package subscription */
         if ($subsPackage) {
             $dataSubsPackage = $this->subscriptionSrv->updatePackage([
                 'customer_id' => $client->id,
@@ -475,16 +584,17 @@ class CheckoutApiController extends Controller
                 'company_id' => $invoice->company_id
             ]);
 
+            $logTitle = $invoiceType === 'new' ? 'Membuat Langganan Baru' : 'Upgrade Langganan';
             LogService::create([
                 'fid' => $dataSubsPackage->id,
                 'category' => 'subscription',
-                'title' => 'Upgrade Langganan',
+                'title' => $logTitle,
                 'note' => "Memperbaharui status langganan ke {$dataSubsPackage->package->name}",
                 'company_id' => $invoice->company_id
             ]);
         }
 
-        /** update addon */
+        /** create/update addon subscription */
         if ($subsAddons) {
             foreach($subsAddons as $subsAddon)
             {
@@ -492,17 +602,18 @@ class CheckoutApiController extends Controller
                     'customer_id' => $client->id,
                     'addon_id' => $subsAddon->itemable_id,
                     'charge' => $subsAddon->charge,
-                    'additional_charge' => $subsAddon->additional_charge,
+                    'additional_charge' => $subsAddon->additional_charge ?? 0,
                     'started_at' => $subsAddon->start_date,
                     'expired_at' => $subsAddon->end_date,
                     'is_active' => true,
                     'company_id' => $invoice->company_id
                 ]);
 
+                $logTitle = $invoiceType === 'addon' ? 'Menambahkan Addon' : 'Menambahkan Addon (Paket Baru)';
                 LogService::create([
                     'fid' => $dataSubsAddon->id,
                     'category' => 'subscription',
-                    'title' => 'Menambahkan Addon',
+                    'title' => $logTitle,
                     'note' => "Menambahkan {$subsAddon->charge} addon {$dataSubsAddon->addon->name}",
                     'company_id' => $invoice->company_id
                 ]);

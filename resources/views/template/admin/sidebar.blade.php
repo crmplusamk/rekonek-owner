@@ -62,6 +62,13 @@
             </a>
         </li>
 
+        <li class="nav-item {{ request()->segment(1) == 'referral' ? 'active' : '' }}">
+            <a href="{{ route('referral.index') }}" class="{{ request()->segment(1) == 'referral' ? 'active' : '' }}">
+                <span class="link-title">Referral</span>
+                <i class="mdi mdi-gift link-icon" data-toggle="tooltip" data-placement="right" title="Referral Code"></i>
+            </a>
+        </li>
+
         <li class="nav-item dropdown {{ request()->segment(1) == 'feature' || request()->segment(1) == 'feature-category' ? 'active' : '' }}">
             <a class="nav-link dropdown-toggle {{ request()->segment(1) == 'feature' || request()->segment(1) == 'feature-category' ? 'active' : '' }}" data-toggle="dropdown" href="#" aria-expanded="false">
                 <span class="link-title">Feature</span>
