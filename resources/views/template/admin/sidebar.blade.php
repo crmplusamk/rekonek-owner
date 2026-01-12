@@ -7,17 +7,11 @@
             </a>
         </li>
 
-        <li class="nav-item dropdown {{ request()->segment(1) == 'customer' ? 'active' : '' }}">
-            <a class="nav-link dropdown-toggle {{ request()->segment(1) == 'customer' ? 'active' : '' }}" data-toggle="dropdown" href="#" aria-expanded="false">
-                <span class="link-title">Contact</span>
-                <i class="mdi mdi-account-box-outline link-icon"></i>
+        <li class="nav-item active">
+            <a href="{{ route('customer.index') }}" class="{{ request()->segment(1) == 'customer' ? 'active' : '' }}">
+                <span class="link-title">Organisasi</span>
+                <i class="mdi mdi-account-box-outline link-icon" data-toggle="tooltip" data-placement="right" title="Organisasi"></i>
             </a>
-            <div class="dropdown-menu">
-                <p class="menu-header">Contact</p>
-                <a class="dropdown-item" href="">Lead</a>
-                <a class="dropdown-item" href="{{ route('customer.index') }}">Customer</a>
-                <a class="dropdown-item" href="">Setting</a>
-            </div>
         </li>
 
         <li class="nav-item">

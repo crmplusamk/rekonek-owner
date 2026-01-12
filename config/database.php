@@ -78,7 +78,7 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
-        'crmplus' => [
+        'client' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_CRM_URL'),
             'host' => env('DB_CRM_HOST', '127.0.0.1'),

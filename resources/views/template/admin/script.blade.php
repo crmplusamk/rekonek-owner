@@ -17,6 +17,7 @@
 <script src="{{ asset('assets/vendors/colorpicker/js/bootstrap-colorpicker.min.js') }}"></script>
 <script src="{{ asset('assets/vendors/sweetalert2/sweetalert2.min.js') }}"></script>
 <script src="{{ asset('assets/vendors/treeview/jstree.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{{ asset('assets/js/region.js') }}"></script>
 <script src="{{ asset('assets/js/message.js') }}"></script>
 <script src="{{ asset('assets/js/custom.js') }}"></script>

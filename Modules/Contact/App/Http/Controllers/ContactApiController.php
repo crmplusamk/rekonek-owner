@@ -2,7 +2,9 @@
 
 namespace Modules\Contact\App\Http\Controllers;
 
+use App\Helpers\Whatsapp\WhatsappHelper;
 use App\Http\Controllers\Controller;
+use App\Models\AccessLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Modules\Contact\App\Repositories\ContactRepository;
@@ -11,14 +13,18 @@ use Modules\Package\App\Models\Package;
 use Modules\Package\App\Repositories\PackageRepository;
 use Modules\Payment\App\Repositories\PaymentRepository;
 use Modules\Subscription\App\Repositories\SubscriptionRepository;
+use Modules\WhatsappOtp\App\Models\WhatsappOtpSession;
 
 class ContactApiController extends Controller
 {
-
     public $contactRepo;
+
     public $packageRepo;
+
     public $subsRepo;
+
     public $invoiceRepo;
+
     public $paymentRepo;
 
     public function __construct(
@@ -43,11 +49,34 @@ class ContactApiController extends Controller
             /** create customer */
             $customer = $this->contactRepo->create($request->all());
 
+            // Log access ketika registrasi berhasil
+            AccessLog::create([
+                'category' => 'registration',
+                'email' => $request->email ?? null,
+                'number' => $request->phone ?? null,
+                'company_id' => $customer->company_id ?? null,
+                'method' => $request->method(),
+                'endpoint' => $request->path(),
+                'status_code' => 200,
+                'request_data' => [
+                    'email' => $request->email ?? null,
+                    'number' => $request->phone ?? null,
+                    'company_id' => $request->company_id ?? null,
+                    'referral_code' => $request->referral_code ?? null,
+                ],
+                'action' => 'register',
+                'activity_type' => 'account_registration',
+                'progress' => 'registration_success',
+            ]);
+
+            // Send greeting message to customer
+            $this->sendGreetingMessage($request->phone, $customer->name ?? 'Customer');
+
             DB::commit();
             return response()->json([
                 'success' => true,
                 'message' => 'Ok',
-                'data' => $customer
+                'data' => $customer,
             ], 200);
 
         } catch (\Exception $e) {
@@ -55,7 +84,7 @@ class ContactApiController extends Controller
             DB::rollBack();
             return response()->json([
                 'error' => true,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
@@ -69,18 +98,20 @@ class ContactApiController extends Controller
             $customer = $this->contactRepo->update($request->all());
 
             DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Ok',
-                'data' => $customer
+                'data' => $customer,
             ], 200);
 
         } catch (\Exception $e) {
 
             DB::rollBack();
+
             return response()->json([
                 'error' => true,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
@@ -94,7 +125,7 @@ class ContactApiController extends Controller
             $customer = $this->contactRepo->verify($request->all());
 
             /** get package */
-            $package = $this->packageRepo->getByName("Free");
+            $package = $this->packageRepo->getByName('Free');
 
             /** create subs */
             $subs = $this->subsRepo->create([
@@ -103,7 +134,7 @@ class ContactApiController extends Controller
                 'is_active' => true,
                 'started_at' => now(),
                 'expired_at' => now()->addDays(14),
-                'company_id' => $customer->company_id
+                'company_id' => $customer->company_id,
             ]);
 
             /** create invoices */
@@ -133,16 +164,16 @@ class ContactApiController extends Controller
                 'payment_total' => 0,
                 'items' => [
                     [
-                        "modelable_id" => $package->id,
-                        "modelable_type" => Package::class,
-                        "duration" => $package->duration,
-                        "duration_type" => $package->duration_type,
-                        "quantity" => 1,
-                        "charge" => 1,
-                        "price" => 0,
-                        "subtotal" => 0
-                    ]
-                ]
+                        'modelable_id' => $package->id,
+                        'modelable_type' => Package::class,
+                        'duration' => $package->duration,
+                        'duration_type' => $package->duration_type,
+                        'quantity' => 1,
+                        'charge' => 1,
+                        'price' => 0,
+                        'subtotal' => 0,
+                    ],
+                ],
             ]);
 
             /** create payments */
@@ -155,19 +186,57 @@ class ContactApiController extends Controller
             ]);
 
             DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Ok',
-                'data' => $customer
+                'data' => $customer,
             ], 200);
 
         } catch (\Throwable $e) {
 
             DB::rollBack();
+
             return response()->json([
                 'error' => true,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Send greeting message to customer after successful registration
+     */
+    private function sendGreetingMessage($phone, $customerName)
+    {
+        try {
+
+            $session = WhatsappOtpSession::where('status', true)->orderBy('created_at', 'asc')->first();
+            
+            if (!$session) {
+                return false;
+            }
+
+            $message = "*Selamat Datang di Rekonek!* 🎉\n\n".
+                       "Hai *{$customerName}*! 👋\n\n".
+                       "Terima kasih telah mendaftar. Akun Anda telah berhasil dibuat!\n\n".
+                       "Sekarang Anda dapat mulai menggunakan layanan kami untuk mengelola bisnis dengan lebih mudah.\n\n".
+                       "Salam hangat,\n".
+                       "*Tim Rekonek*\n\n".
+                       "_Ini adalah pesan otomatis dari Rekonek_";
+
+            $response = WhatsappHelper::sendTextMessage(
+                $session->session,
+                $phone,
+                $message
+            );
+
+            return $response;
+
+        } catch (\Exception $e) {
+
+            \Log::error('Failed to send greeting message: ' . $e->getMessage());
+            return false;
         }
     }
 
@@ -182,21 +251,23 @@ class ContactApiController extends Controller
             ]);
 
             DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Ok',
                 'data' => [
                     'customer' => $customer,
-                    'subscription' => $subscription
+                    'subscription' => $subscription,
                 ],
             ], 200);
 
         } catch (\Exception $e) {
 
             DB::rollBack();
+
             return response()->json([
                 'error' => true,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }

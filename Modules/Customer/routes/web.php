@@ -18,6 +18,7 @@ Route::middleware('auth')->group(function () {
     Route::get('customer/get-list', [CustomerController::class, 'list'])->name('customer.list');
     Route::get('customer/get-datatable', [CustomerController::class, 'datatable'])->name('customer.table');
     Route::get('customer/status/{id}', [CustomerController::class, 'status'])->name('customer.status');
+    Route::get('customer/{customerId}/invoice-detail/{invoiceId}', [CustomerController::class, 'getInvoiceDetail'])->name('customer.invoice-detail');
 
     Route::resource('customer', CustomerController::class)->names('customer');
 });

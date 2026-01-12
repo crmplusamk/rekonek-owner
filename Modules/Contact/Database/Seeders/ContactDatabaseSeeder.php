@@ -16,7 +16,7 @@ class ContactDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $clients = DB::connection('crmplus')->table('companies')->get();
+        $clients = DB::connection('client')->table('companies')->get();
         $customPackage = Package::where('name', 'Free')->first();
 
         foreach($clients as $client) {
