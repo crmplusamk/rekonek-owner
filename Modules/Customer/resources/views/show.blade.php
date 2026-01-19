@@ -39,28 +39,9 @@
         </div>
         {{-- End Access Log Progress Pipeline --}}
 
-        {{-- Tabs Navigation --}}
-        <ul class="nav nav-pills border-bottom mb-3" id="pills-tab" role="tablist">
-            <li class="nav-item">
-                <a class="nav-link active" id="stats-tab" data-toggle="pill" href="#stats-content" role="tab" aria-controls="stats-content" aria-selected="true">
-                    Statistik
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="invoice-tab" data-toggle="pill" href="#invoice-content" role="tab" aria-controls="invoice-content" aria-selected="false">
-                    Invoice & Langganan
-                </a>
-            </li>
-        </ul>
-
-        {{-- Tabs Content --}}
-        <div class="tab-content" id="pills-tabContent">
-            
-            {{-- Statistik Tab --}}
-            <div class="tab-pane fade show active" id="stats-content" role="tabpanel" aria-labelledby="stats-tab">
-                
-                <!-- Statistics Cards Row 1 -->
-                <div class="row mb-4">
+        {{-- Statistics Cards --}}
+        <!-- Statistics Cards Row 1 -->
+        <div class="row mb-4">
             <div class="col-md-3">
                 <div class="card shadow-sm">
                     <div class="card-body">
@@ -144,25 +125,52 @@
                 </div>
             </div>
         </div>
+        {{-- End Statistics Cards --}}
 
-        <!-- 30-Day Statistics Charts -->
-        <div class="mb-4">
-            <!-- Contacts Chart -->
-            <div class="p-4 border-1 mb-4 shadow-sm">
-                <h5 class="mb-4">30 Hari Terakhir - Contacts</h5>
-                <canvas id="contactsChart"></canvas>
-            </div>
-            <!-- Conversations Chart -->
-            <div class="p-4 border-1 mb-4 shadow-sm">
-                <h5 class="mb-4">30 Hari Terakhir - Conversations</h5>
-                <canvas id="conversationsChart"></canvas>
-            </div>
-            <!-- Tasks Chart -->
-            <div class="p-4 border-1 mb-4 shadow-sm">
-                <h5 class="mb-4">30 Hari Terakhir - Tasks</h5>
-                <canvas id="tasksChart"></canvas>
-            </div>
-        </div>
+        {{-- Tabs Navigation --}}
+        <ul class="nav nav-pills border-bottom mb-3" id="pills-tab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="stats-tab" data-toggle="pill" href="#stats-content" role="tab" aria-controls="stats-content" aria-selected="true">
+                    Statistik
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="invoice-tab" data-toggle="pill" href="#invoice-content" role="tab" aria-controls="invoice-content" aria-selected="false">
+                    Invoice & Langganan
+                </a>
+            </li>
+        </ul>
+
+        {{-- Tabs Content --}}
+        <div class="tab-content" id="pills-tabContent">
+            
+            {{-- Statistik Tab --}}
+            <div class="tab-pane fade show active" id="stats-content" role="tabpanel" aria-labelledby="stats-tab">
+                
+                <!-- 30-Day Statistics Charts -->
+                <div class="row">
+                    <!-- Contacts Chart -->
+                    <div class="col-12 col-md-6 mb-4">
+                        <div class="p-4 border-1 shadow-sm">
+                            <h5 class="mb-4">30 Hari Terakhir - Contacts</h5>
+                            <canvas id="contactsChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Conversations Chart -->
+                    <div class="col-12 col-md-6 mb-4">
+                        <div class="p-4 border-1 shadow-sm">
+                            <h5 class="mb-4">30 Hari Terakhir - Conversations</h5>
+                            <canvas id="conversationsChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Tasks Chart -->
+                    <div class="col-12 col-md-6 mb-4">
+                        <div class="p-4 border-1 shadow-sm">
+                            <h5 class="mb-4">30 Hari Terakhir - Tasks</h5>
+                            <canvas id="tasksChart"></canvas>
+                        </div>
+                    </div>
+                </div>
 
             </div>{{-- End Statistik Tab --}}
         

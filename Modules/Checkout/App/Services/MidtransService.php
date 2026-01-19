@@ -26,17 +26,19 @@ class MidtransService
 
     public function generateSnapToken($invoice, $orderId, $time, $timelimit)
     {
-        $items = [];
-        $items = $this->invoiceItems($items, $invoice);
-        $items = $this->fee($items, $invoice);
-        $items = $this->discount($items, $invoice);
-
         $params = [
             "transaction_details" => [
                 "order_id" => $orderId,
-                "gross_amount" => $invoice->total
+                "gross_amount" => (int) $invoice->total
             ],
-            "item_details" => $items,
+            "item_details" => [
+                [
+                    "id" => $invoice->code,
+                    "name" => "Pembayaran Invoice " . $invoice->code,
+                    "quantity" => 1,
+                    "price" => (int) $invoice->total,
+                ]
+            ],
             "customer_details" => [
                 "first_name" => $invoice->customer_name,
                 "email" => $invoice->customer_email,

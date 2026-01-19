@@ -33,8 +33,7 @@ class FollowupMasterCommand extends Command
             'followup:registration-success',
             'followup:email-verified',
             'followup:first-login',
-            'followup:onboarding',
-            'followup:subscription-expired'
+            'followup:onboarding'
         ];
 
         foreach ($commands as $command) {

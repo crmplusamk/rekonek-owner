@@ -11,13 +11,11 @@ class PackageService
     public function calculateTotal($subtotal)
     {
         $tax = 11;
-
-        // Tax is calculated only from subtotal
-        $tax_amount = $subtotal * $tax / 100;
-        $total = $subtotal + $tax_amount;
+        $tax_amount = (int) floor($subtotal * $tax / 100);
+        $total = (int) floor($subtotal + $tax_amount);
 
         return [
-            "subtotal" => $subtotal,
+            "subtotal" => (int) $subtotal,
             "tax" => $tax,
             "tax_amount" => $tax_amount,
             "total" => $total,
