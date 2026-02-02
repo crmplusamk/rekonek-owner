@@ -10,9 +10,10 @@ class PackageService
 
     public function calculateTotal($subtotal)
     {
-        $tax = 11;
-        $tax_amount = (int) floor($subtotal * $tax / 100);
-        $total = (int) floor($subtotal + $tax_amount);
+        // PPN no longer used in billing
+        $tax = 0;
+        $tax_amount = 0;
+        $total = (int) floor($subtotal);
 
         return [
             "subtotal" => (int) $subtotal,

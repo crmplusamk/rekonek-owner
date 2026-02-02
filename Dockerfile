@@ -54,11 +54,15 @@ COPY docker/nginx/php-fpm.conf /usr/local/etc/php-fpm.d/zz-docker.conf
 # Copy konfigurasi supervisord
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Set permission storage & bootstrap/cache
-RUN chown -R www-data:www-data /var/www && \
-    chmod -R 775 storage bootstrap/cache
+# Entrypoint: siapkan storage/bootstrap, jalankan migrate + optimize, lalu supervisord
+COPY docker/start-container.sh /usr/local/bin/start-container.sh
+RUN chmod +x /usr/local/bin/start-container.sh
+
+# Set permission storage & bootstrap/cache (build time)
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache && \
+    chmod -R ug+rwx /var/www/storage /var/www/bootstrap/cache
 
 EXPOSE 80
 
-# Jalankan Nginx + PHP-FPM lewat supervisord
-CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Jalankan script yang buat dir, migrate, cache, chown, lalu supervisord
+CMD ["/usr/local/bin/start-container.sh"]

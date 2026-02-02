@@ -94,17 +94,14 @@ class MidtransService
 
     public function fee($items, $invoice)
     {
-        $fees = [
-            [
+        // PPN no longer used in billing - skip tax fee
+        if ($invoice->tax_amount > 0) {
+            $items[] = [
                 "id" => "TX01",
-                "name" => "PPN ".$invoice->tax."%",
+                "name" => "PPN " . $invoice->tax . "%",
                 "price" => $invoice->tax_amount,
                 "quantity" => 1,
-            ]
-        ];
-
-        foreach ($fees as $fee) {
-            $items[] = $fee;
+            ];
         }
 
         return $items;

@@ -457,10 +457,6 @@
                                                 <td class="text-right" colspan="4">Biaya Admin</td>
                                                 <td class="text-right" id="modal-admin-fee"></td>
                                             </tr>
-                                            <tr>
-                                                <td class="text-right" colspan="4">PPN <span id="modal-tax-percentage"></span>%</td>
-                                                <td class="text-right" id="modal-tax-amount"></td>
-                                            </tr>
                                             <tr style="background-color: #2465FF !important;">
                                                 <td class="text-right" colspan="4" style="background-color: #2465FF !important;">
                                                     <span class="h6 font-weight-bold text-white mb-0">TOTAL</span>
@@ -610,8 +606,6 @@
                 $('#modal-discount-amount').text('Rp ' + Number(invoice.discount_percentage_amount || 0).toLocaleString('id-ID'));
                 $('#modal-service-fee').text('Rp ' + Number(invoice.service_fee || 0).toLocaleString('id-ID'));
                 $('#modal-admin-fee').text('Rp ' + Number(invoice.admin_fee || 0).toLocaleString('id-ID'));
-                $('#modal-tax-percentage').text(invoice.tax || 0);
-                $('#modal-tax-amount').text('Rp ' + Number(invoice.tax_amount || 0).toLocaleString('id-ID'));
                 $('#modal-total').text('Rp ' + Number(invoice.total).toLocaleString('id-ID'));
                 
                 // Logs
