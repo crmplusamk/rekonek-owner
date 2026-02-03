@@ -206,6 +206,16 @@ class CustomerController extends Controller
                 ->select('name', 'last_login_at')
                 ->get();
             
+            // Get subscription data from backoffice database by company_id
+            $subscription = null;
+            if ($customer->company_id) {
+                $subscription = DB::table('subscription_packages')
+                    ->where('company_id', $customer->company_id)
+                    ->where('is_active', true)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+            }
+            
             // Get invoices data from backoffice database
             $invoices = DB::table('invoices')
                 ->where('customer_id', $id)
@@ -265,6 +275,41 @@ class CustomerController extends Controller
             // Get completed stages
             $completedStages = $accessLogs->pluck('progress')->unique()->values()->toArray();
             
+            // Get onboarding data from company
+            $onboardingData = null;
+            if ($company) {
+                $onboardingData = [
+                    // Step 1: Informasi Usaha
+                    'business_owner_name' => $company->business_owner_name ?? null,
+                    'business_name' => $company->name ?? null,
+                    'business_sector' => $company->business_sector ?? null,
+                    'business_from' => $company->business_from ?? null,
+                    'province_id' => $company->province_id ?? null,
+                    'province_name' => $company->province_name ?? null,
+                    'city_id' => $company->city_id ?? null,
+                    'city_name' => $company->city_name ?? null,
+                    'district_id' => $company->district_id ?? null,
+                    'district_name' => $company->district_name ?? null,
+                    'address' => $company->address ?? null,
+                    
+                    // Step 2: Personalisasi
+                    'is_business_online' => $company->is_business_online ?? null,
+                    'business_product' => $company->business_product ?? null,
+                    'using_crm_for' => $company->using_crm_for ?? null,
+                    
+                    // Step 3: Survey
+                    'is_using_any_apps' => $company->is_using_any_apps ?? null,
+                    'business_online_name' => $company->business_online_name ?? null,
+                    'app_source_from' => $company->app_source_from ?? null,
+                    'app_source_any' => $company->app_source_any ?? null,
+                    
+                    // Status
+                    'is_status' => $company->is_status ?? 0,
+                    'created_at' => $company->created_at ?? null,
+                    'updated_at' => $company->updated_at ?? null,
+                ];
+            }
+
             $data = [
                 'customer' => $customer,
                 'company' => $company,
@@ -277,7 +322,9 @@ class CustomerController extends Controller
                 'access_log_stages' => $accessLogStages,
                 'completed_stages' => $completedStages,
                 'access_logs' => $accessLogs,
-                'invoices' => $invoices
+                'invoices' => $invoices,
+                'onboarding' => $onboardingData,
+                'subscription' => $subscription
             ];
             
             return view('customer::show', compact('data'));
