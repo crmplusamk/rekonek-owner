@@ -23,6 +23,7 @@ su-exec www-data php artisan optimize:clear
 # su-exec www-data php artisan route:cache
 # su-exec www-data php artisan view:cache
 
+# storage:link butuh buat symlink di public/ — public/ sudah di-chown www-data di Dockerfile
 su-exec www-data php artisan storage:link
 
 exec supervisord -c /etc/supervisor/conf.d/supervisord.conf

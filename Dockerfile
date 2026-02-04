@@ -59,9 +59,10 @@ COPY docker/start-container.sh /usr/local/bin/start-container.sh
 RUN chmod +x /usr/local/bin/start-container.sh
 
 # Buat struktur storage & bootstrap/cache, set owner www-data, permission 775
-RUN mkdir -p /var/www/storage/framework/{sessions,views,cache/data} /var/www/storage/logs /var/www/bootstrap/cache && \
+RUN mkdir -p /var/www/storage/framework/{sessions,views,cache/data} /var/www/storage/logs /var/www/storage/app/public /var/www/bootstrap/cache && \
     chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache && \
-    chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+    chmod -R 775 /var/www/storage /var/www/bootstrap/cache && \
+    chown -R www-data:www-data /var/www/public
 
 EXPOSE 80
 
