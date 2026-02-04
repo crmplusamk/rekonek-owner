@@ -18,10 +18,10 @@ su-exec www-data php artisan migrate --force
 
 su-exec www-data php artisan optimize:clear
 
-su-exec www-data php artisan config:cache
-su-exec www-data php artisan event:cache
-su-exec www-data php artisan route:cache
-su-exec www-data php artisan view:cache
+# su-exec www-data php artisan config:cache
+# su-exec www-data php artisan event:cache
+# su-exec www-data php artisan route:cache
+# su-exec www-data php artisan view:cache
 
 su-exec www-data php artisan storage:link
 
