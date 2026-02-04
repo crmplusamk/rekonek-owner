@@ -69,10 +69,10 @@
                             <th data-orderable="false" class="td-checkbox">
                                 <input type="checkbox" id="checkAll">
                             </th>
-                            <th class="text-center">Id</th>
                             <th class="text-center">Nama</th>
                             <th class="text-center">Kode</th>
                             <th class="text-center">Phone</th>
+                            <th class="text-center">Register At</th>
                             <th class="text-center">Status</th>
                             <th data-orderable="false"></th>
                         </tr>
@@ -115,9 +115,6 @@
                     sortable: false,
                 },
                 {
-                    data: "id",
-                },
-                {
                     data: "name",
                 },
                 {
@@ -126,6 +123,9 @@
                 {
                     data: "phone",
                     sortable: false,
+                },
+                {
+                    data: "created_at",
                 },
                 {
                     data: "status",
@@ -139,12 +139,12 @@
             columnDefs: [
                 {
                     className: 'dt-center',
-                    targets: [0, 3, 4, 5]
+                    targets: [0, 2, 3, 4, 5]
                 }
             ],
             dom: 'lrtip',
             order: [
-                [2, 'asc'],
+                [4, 'desc'],
             ],
             length: 10,
             lengthChange: false,

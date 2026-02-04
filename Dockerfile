@@ -34,9 +34,9 @@ FROM php:8.1-fpm-alpine AS runtime
 ENV TZ=Asia/Jakarta \
     APP_ENV=production
 
-# Install Nginx & Supervisord + PHP ext untuk Postgres
+# Install Nginx, Supervisord, su-exec (untuk jalankan artisan sebagai www-data) + PHP ext
 RUN apk add --no-cache \
-    nginx supervisor icu-dev libzip-dev libpng-dev libxml2-dev \
+    nginx supervisor su-exec icu-dev libzip-dev libpng-dev libxml2-dev \
     postgresql-dev sqlite && \
     docker-php-ext-install intl pdo_pgsql bcmath gd zip opcache && \
     rm -rf /var/cache/apk/*
@@ -58,9 +58,10 @@ COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/start-container.sh /usr/local/bin/start-container.sh
 RUN chmod +x /usr/local/bin/start-container.sh
 
-# Set permission storage & bootstrap/cache (build time)
-RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache && \
-    chmod -R ug+rwx /var/www/storage /var/www/bootstrap/cache
+# Buat struktur storage & bootstrap/cache, set owner www-data, permission 775
+RUN mkdir -p /var/www/storage/framework/{sessions,views,cache/data} /var/www/storage/logs /var/www/bootstrap/cache && \
+    chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache && \
+    chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 
 EXPOSE 80
 
