@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Modules\Referral\App\Models\Referral;
 use Modules\Referral\App\Models\ReferralUsage;
 use Yajra\DataTables\Facades\DataTables;
@@ -34,7 +35,12 @@ class ReferralController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'code' => 'required|string|unique:referrals,code|max:50',
+            'code' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('referrals', 'code')->whereNull('deleted_at'),
+            ],
             'name' => 'nullable|string|max:255',
             'discount_type' => 'required|in:percentage,nominal',
             'discount_percentage' => 'required_if:discount_type,percentage|nullable|integer|min:0|max:100',
@@ -128,7 +134,12 @@ class ReferralController extends Controller
         $referral = Referral::findOrFail($id);
 
         $request->validate([
-            'code' => 'required|string|max:50|unique:referrals,code,' . $id,
+            'code' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('referrals', 'code')->ignore($id)->whereNull('deleted_at'),
+            ],
             'name' => 'nullable|string|max:255',
             'discount_type' => 'required|in:percentage,nominal',
             'discount_percentage' => 'required_if:discount_type,percentage|nullable|integer|min:0|max:100',
