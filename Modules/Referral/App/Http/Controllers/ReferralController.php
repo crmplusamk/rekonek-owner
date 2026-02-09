@@ -18,7 +18,10 @@ class ReferralController extends Controller
      */
     public function index()
     {
-        return view('referral::index');
+        $activeCount = Referral::where('is_active', true)->count();
+        $inactiveCount = Referral::where('is_active', false)->count();
+        
+        return view('referral::index', compact('activeCount', 'inactiveCount'));
     }
 
     /**

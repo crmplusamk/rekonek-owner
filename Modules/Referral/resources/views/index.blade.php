@@ -8,11 +8,11 @@
                 <div class="btn-group btn-group-toggle btn-group-status" data-toggle="buttons">
                     <label for="status_active" class="btn btn-outline-primary active">
                         <input type="radio" name="filter_status" id="status_active" value="1" checked>
-                        Active (<span id="count_active">0</span>)
+                        Active (<span id="count_active">{{ $activeCount }}</span>)
                     </label>
                     <label for="status_inactive" class="btn btn-outline-primary">
                         <input type="radio" name="filter_status" id="status_inactive" value="0">
-                        Inactive (<span id="count_inactive">0</span>)
+                        Inactive (<span id="count_inactive">{{ $inactiveCount }}</span>)
                     </label>
                 </div>
             </div>

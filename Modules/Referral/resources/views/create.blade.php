@@ -133,7 +133,10 @@
                     
                     <div class="col-12 form-group mt-2">
                         <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" {{ old('is_active') ? 'checked' : '' }}>
+                            @php
+                                $isActive = old('_token') ? old('is_active') : true;
+                            @endphp
+                            <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" {{ $isActive ? 'checked' : '' }}>
                             <label class="custom-control-label" for="is_active">Aktif</label>
                         </div>
                     </div>
