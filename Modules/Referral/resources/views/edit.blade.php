@@ -133,7 +133,7 @@
                     
                     <div class="col-12 form-group mt-2">
                         <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" {{ old('is_active', $referral->is_active) ? 'checked' : '' }}>
+                            <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" value="1" {{ old('is_active', $referral->is_active) ? 'checked' : '' }}>
                             <label class="custom-control-label" for="is_active">Aktif</label>
                         </div>
                     </div>
