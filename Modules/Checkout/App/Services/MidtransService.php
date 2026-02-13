@@ -109,16 +109,6 @@ class MidtransService
 
     public function discount($items, $invoice)
     {
-        // Add referral discount as negative item if exists
-        if ($invoice->discount_amount > 0 && $invoice->referral_code) {
-            $items[] = [
-                "id" => "DISC01",
-                "name" => "Diskon Referral ({$invoice->referral_code})",
-                "price" => -$invoice->discount_amount, // Negative price for discount
-                "quantity" => 1,
-            ];
-        }
-
         return $items;
     }
 

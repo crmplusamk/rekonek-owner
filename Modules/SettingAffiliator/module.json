@@ -1,0 +1,11 @@
+{
+    "name": "SettingAffiliator",
+    "alias": "settingaffiliator",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\SettingAffiliator\\App\\Providers\\SettingAffiliatorServiceProvider"
+    ],
+    "files": []
+}

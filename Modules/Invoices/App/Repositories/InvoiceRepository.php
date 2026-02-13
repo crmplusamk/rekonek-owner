@@ -26,7 +26,6 @@ class InvoiceRepository
             'discount_percentage' => $request['discount_percentage'],
             'discount_percentage_amount' => $request['discount_percentage_amount'],
             'discount_amount' => $request['discount_amount'],
-            'referral_code' => $request['referral_code'],
             'admin_fee' => $request['admin_fee'],
             'service_fee' => $request['service_fee'],
             'subtotal' => $request['subtotal'],

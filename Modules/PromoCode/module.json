@@ -1,0 +1,11 @@
+{
+    "name": "PromoCode",
+    "alias": "promocode",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\PromoCode\\App\\Providers\\PromoCodeServiceProvider"
+    ],
+    "files": []
+}

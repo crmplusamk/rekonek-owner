@@ -22,6 +22,11 @@ class AuthenticationController extends Controller
 
             if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
                 $request->session()->regenerate();
+
+                if (auth()->user()->hasRole('affiliator')) {
+                    return to_route('affiliator.index');
+                }
+
                 return to_route('dashboard.index');
             }
 

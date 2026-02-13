@@ -244,7 +244,8 @@ class CustomerController extends Controller
                 $invoice->items = $items;
             }
             
-            // Access Log Progress - Static stages in order
+            // Access Log Progress - Static stages in order (untuk tampilan pipeline di UI)
+            // Catatan: whatsapp_connected hanya untuk UI; tidak ada command followup untuk stage ini (command terpisah).
             $accessLogStages = [
                 'request_token' => 'Request Token',
                 'token_verified' => 'Token Verified',
@@ -252,7 +253,8 @@ class CustomerController extends Controller
                 'email_verified_success' => 'Email Verified',
                 'first_login_success' => 'First Login',
                 'onboarding_completed' => 'Onboarding Completed',
-                'trial_activated' => 'Trial Activated'
+                'trial_activated' => 'Trial Activated',
+                'whatsapp_connected' => 'Whatsapp Connected',
             ];
             
             // Query access logs for this customer

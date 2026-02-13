@@ -17,8 +17,8 @@ class UserRoleDatabaseSeeder extends Seeder
         $roleAdmin = Role::where('name', 'administrator')->first();
         $userAdmin->assignRole($roleAdmin);
 
-        $userSales = User::where('name', 'staff')->first();
-        $roleSales = Role::where('name', 'staff')->first();
+        $userSales = User::where('name', 'affiliator')->first();
+        $roleSales = Role::where('name', 'affiliator')->first();
         $userSales->assignRole($roleSales);
     }
 }

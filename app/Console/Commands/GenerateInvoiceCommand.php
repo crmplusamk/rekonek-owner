@@ -192,7 +192,6 @@ class GenerateInvoiceCommand extends Command
                     'discount_percentage' => 0,
                     'discount_percentage_amount' => 0,
                     'discount_amount' => 0,
-                    'referral_code' => null,
                     'admin_fee' => 0,
                     'service_fee' => 0,
                     'subtotal' => $calculate['subtotal'],
