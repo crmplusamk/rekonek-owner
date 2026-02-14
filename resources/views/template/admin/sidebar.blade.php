@@ -56,10 +56,17 @@
             </a>
         </li>
 
-        <li class="nav-item {{ request()->segment(1) == 'referral' ? 'active' : '' }}">
-            <a href="{{ route('referral.index') }}" class="{{ request()->segment(1) == 'referral' ? 'active' : '' }}">
-                <span class="link-title">Referral</span>
-                <i class="mdi mdi-gift link-icon" data-toggle="tooltip" data-placement="right" title="Referral Code"></i>
+        <li class="nav-item {{ request()->segment(1) == 'promo-code' ? 'active' : '' }}">
+            <a href="{{ route('promo-code.index') }}" class="{{ request()->segment(1) == 'promo-code' ? 'active' : '' }}">
+                <span class="link-title">Promo Code</span>
+                <i class="mdi mdi-ticket-percent link-icon" data-toggle="tooltip" data-placement="right" title="Promo Code"></i>
+            </a>
+        </li>
+
+        <li class="nav-item {{ request()->segment(1) == 'setting-affiliator' ? 'active' : '' }}">
+            <a href="{{ route('setting-affiliator.index') }}" class="{{ request()->segment(1) == 'setting-affiliator' ? 'active' : '' }}">
+                <span class="link-title">Affiliator</span>
+                <i class="mdi mdi-account-group link-icon" data-toggle="tooltip" data-placement="right" title="Affiliator"></i>
             </a>
         </li>
 

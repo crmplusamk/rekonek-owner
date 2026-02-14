@@ -1,25 +1,9 @@
 <?php
 
-use App\Models\Addon;
-use App\Models\Contact;
-use App\Models\Feature;
-use Illuminate\Support\Str;
 // use App\Models\Subscription;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use App\Models\SubscriptionFeature;
-use App\Models\SubscriptionInvoice;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Route;
-use App\Http\Resources\InvoiceResource;
-use App\Http\Resources\AddonListResource;
+use App\Http\Controllers\Api\AccessLogApiController;
 use App\Http\Resources\AuthServiceResource;
-use App\Http\Resources\ContactListResource;
-use App\Http\Resources\FeatureListResource;
-use App\Http\Resources\PackageListResource;
-use App\Http\Resources\PackageFeatureListResource;
-use Modules\Package\App\Models\Package;
-use Modules\Subscription\App\Models\Subscription;
+use Illuminate\Support\Facades\Route;
 use Modules\Subscription\App\Models\SubscriptionAddon;
 use Modules\Subscription\App\Models\SubscriptionPackage;
 use Modules\WhatsappOtp\App\Http\Controllers\WebhookOtpController;
@@ -37,6 +21,8 @@ use Modules\WhatsappOtp\App\Http\Controllers\WebhookOtpController;
 
 Route::post('chat-whatsapp-webhook-event/v2/private/{session}/{userId}', [WebhookOtpController::class, 'handle']);
 
+Route::post('access-logs', [AccessLogApiController::class, 'store']);
+
 Route::get('authentication/{companyid}', function ($companyid) {
 
     // return response()->json([
@@ -46,10 +32,10 @@ Route::get('authentication/{companyid}', function ($companyid) {
     try {
 
         $subsPackage = SubscriptionPackage::where('company_id', $companyid)
-            ->with(["package.features.addon.subscriptionAddons" => function($query) use($companyid) {
+            ->with(['package.features.addon.subscriptionAddons' => function ($query) use ($companyid) {
                 $query->where([
                     'is_active' => true,
-                    'company_id' => $companyid
+                    'company_id' => $companyid,
                 ]);
             }])
             ->first();
@@ -60,14 +46,14 @@ Route::get('authentication/{companyid}', function ($companyid) {
 
         return new AuthServiceResource([
             'subsPackage' => $subsPackage,
-            'subsAddon' => $subsAddon
+            'subsAddon' => $subsAddon,
         ]);
 
     } catch (\Exception $e) {
 
         return response()->json([
-            "error" => true,
-            "message" => $e->getMessage()
+            'error' => true,
+            'message' => $e->getMessage(),
         ], 500);
     }
 });

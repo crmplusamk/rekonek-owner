@@ -26,17 +26,19 @@ class MidtransService
 
     public function generateSnapToken($invoice, $orderId, $time, $timelimit)
     {
-        $items = [];
-        $items = $this->invoiceItems($items, $invoice);
-        $items = $this->fee($items, $invoice);
-        $items = $this->discount($items, $invoice);
-
         $params = [
             "transaction_details" => [
                 "order_id" => $orderId,
-                "gross_amount" => $invoice->total
+                "gross_amount" => (int) $invoice->total
             ],
-            "item_details" => $items,
+            "item_details" => [
+                [
+                    "id" => $invoice->code,
+                    "name" => "Pembayaran Invoice " . $invoice->code,
+                    "quantity" => 1,
+                    "price" => (int) $invoice->total,
+                ]
+            ],
             "customer_details" => [
                 "first_name" => $invoice->customer_name,
                 "email" => $invoice->customer_email,
@@ -92,17 +94,14 @@ class MidtransService
 
     public function fee($items, $invoice)
     {
-        $fees = [
-            [
+        // PPN no longer used in billing - skip tax fee
+        if ($invoice->tax_amount > 0) {
+            $items[] = [
                 "id" => "TX01",
-                "name" => "PPN ".$invoice->tax."%",
+                "name" => "PPN " . $invoice->tax . "%",
                 "price" => $invoice->tax_amount,
                 "quantity" => 1,
-            ]
-        ];
-
-        foreach ($fees as $fee) {
-            $items[] = $fee;
+            ];
         }
 
         return $items;
@@ -110,16 +109,6 @@ class MidtransService
 
     public function discount($items, $invoice)
     {
-        // Add referral discount as negative item if exists
-        if ($invoice->discount_amount > 0 && $invoice->referral_code) {
-            $items[] = [
-                "id" => "DISC01",
-                "name" => "Diskon Referral ({$invoice->referral_code})",
-                "price" => -$invoice->discount_amount, // Negative price for discount
-                "quantity" => 1,
-            ];
-        }
-
         return $items;
     }
 

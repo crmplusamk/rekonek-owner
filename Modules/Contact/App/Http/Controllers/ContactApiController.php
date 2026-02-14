@@ -4,7 +4,6 @@ namespace Modules\Contact\App\Http\Controllers;
 
 use App\Helpers\Whatsapp\WhatsappHelper;
 use App\Http\Controllers\Controller;
-use App\Models\AccessLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Modules\Contact\App\Repositories\ContactRepository;
@@ -14,6 +13,7 @@ use Modules\Package\App\Repositories\PackageRepository;
 use Modules\Payment\App\Repositories\PaymentRepository;
 use Modules\Subscription\App\Repositories\SubscriptionRepository;
 use Modules\WhatsappOtp\App\Models\WhatsappOtpSession;
+use App\Services\AccessLogService;
 
 class ContactApiController extends Controller
 {
@@ -27,18 +27,22 @@ class ContactApiController extends Controller
 
     public $paymentRepo;
 
+    protected AccessLogService $accessLogService;
+
     public function __construct(
         ContactRepository $contactRepo,
         PackageRepository $packageRepo,
         SubscriptionRepository $subsRepo,
         InvoiceRepository $invoiceRepo,
-        PaymentRepository $paymentRepo)
+        PaymentRepository $paymentRepo,
+        AccessLogService $accessLogService)
     {
         $this->contactRepo = $contactRepo;
         $this->packageRepo = $packageRepo;
         $this->subsRepo = $subsRepo;
         $this->invoiceRepo = $invoiceRepo;
         $this->paymentRepo = $paymentRepo;
+        $this->accessLogService = $accessLogService;
     }
 
     public function store(Request $request)
@@ -46,13 +50,12 @@ class ContactApiController extends Controller
         DB::beginTransaction();
         try {
 
-            /** create customer */
             $customer = $this->contactRepo->create($request->all());
 
-            // Log access ketika registrasi berhasil
-            AccessLog::create([
-                'category' => 'registration',
+            $this->accessLogService->create([
                 'email' => $request->email ?? null,
+                'progress' => 'registration_success',
+                'category' => 'registration',
                 'number' => $request->phone ?? null,
                 'company_id' => $customer->company_id ?? null,
                 'method' => $request->method(),
@@ -62,17 +65,13 @@ class ContactApiController extends Controller
                     'email' => $request->email ?? null,
                     'number' => $request->phone ?? null,
                     'company_id' => $request->company_id ?? null,
-                    'referral_code' => $request->referral_code ?? null,
                 ],
                 'action' => 'register',
                 'activity_type' => 'account_registration',
-                'progress' => 'registration_success',
             ]);
 
-            // Send greeting message to customer
-            $this->sendGreetingMessage($request->phone, $customer->name ?? 'Customer');
-
             DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Ok',
@@ -82,6 +81,7 @@ class ContactApiController extends Controller
         } catch (\Exception $e) {
 
             DB::rollBack();
+
             return response()->json([
                 'error' => true,
                 'message' => $e->getMessage(),
@@ -152,7 +152,6 @@ class ContactApiController extends Controller
                 'discount_percentage' => 0,
                 'discount_percentage_amount' => 0,
                 'discount_amount' => 0,
-                'referral_code' => null,
                 'admin_fee' => 0,
                 'service_fee' => 0,
                 'subtotal' => 0,
@@ -187,6 +186,9 @@ class ContactApiController extends Controller
 
             DB::commit();
 
+            // Send greeting message to customer after successful email verification
+            $this->sendGreetingMessage($customer->phone, $customer->name ?? 'Customer');
+
             return response()->json([
                 'success' => true,
                 'message' => 'Ok',
@@ -205,25 +207,29 @@ class ContactApiController extends Controller
     }
 
     /**
-     * Send greeting message to customer after successful registration
+     * Send greeting message to customer after successful email verification
      */
     private function sendGreetingMessage($phone, $customerName)
     {
         try {
 
             $session = WhatsappOtpSession::where('status', true)->orderBy('created_at', 'asc')->first();
-            
-            if (!$session) {
+
+            if (! $session) {
                 return false;
             }
 
-            $message = "*Selamat Datang di Rekonek!* 🎉\n\n".
-                       "Hai *{$customerName}*! 👋\n\n".
-                       "Terima kasih telah mendaftar. Akun Anda telah berhasil dibuat!\n\n".
-                       "Sekarang Anda dapat mulai menggunakan layanan kami untuk mengelola bisnis dengan lebih mudah.\n\n".
-                       "Salam hangat,\n".
-                       "*Tim Rekonek*\n\n".
-                       "_Ini adalah pesan otomatis dari Rekonek_";
+            $message = "Halo Kak *{$customerName}*! 👋\n\n".
+                       "Terima kasih sudah memilih Rekonek untuk jadi pusat komando bisnis Anda. Akun Anda sudah siap!\n\n".
+                       "Agar tidak bingung, yuk tonton video panduan setup 2 menit ini:\n".
+                       "https://www.youtube.com/watch?v=u063lZ-zDGQ\n\n".
+                       "*Langkah pertama Anda:*\n\n".
+                       "1. Login ke Dashboard:\n".
+                       "https://app.rekonek.com/login\n\n".
+                       "2. Hubungkan WhatsApp (Scan QR)\n\n".
+                       "3. Atur akses tim Anda.\n\n".
+                       "Selamat tinggal blindspot 🚀\n\n".
+                       '_Ini adalah pesan otomatis dari Rekonek_';
 
             $response = WhatsappHelper::sendTextMessage(
                 $session->session,
@@ -235,7 +241,8 @@ class ContactApiController extends Controller
 
         } catch (\Exception $e) {
 
-            \Log::error('Failed to send greeting message: ' . $e->getMessage());
+            \Log::error('Failed to send greeting message: '.$e->getMessage());
+
             return false;
         }
     }

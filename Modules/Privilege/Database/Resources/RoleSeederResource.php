@@ -13,10 +13,10 @@ return [
     ],
     [
         'id' => Str::uuid(),
-        'name' => 'staff',
-        'alias' => 'Staff',
+        'name' => 'affiliator',
+        'alias' => 'Affiliator',
         'guard_name' => 'web',
         'is_delete' => false,
         'created_at' => now(),
-    ],
+    ]
 ];

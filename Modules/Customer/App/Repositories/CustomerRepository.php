@@ -98,19 +98,21 @@ class CustomerRepository
                 });
             })
             ->when(request()->order[0], function ($query) {
+                $column = request()->order[0]['column'];
+                $dir    = request()->order[0]['dir'];
+
                 $orderMappings = [
                     "1" => 'name',
                     "2" => 'code',
+                    "4" => 'created_at',
                 ];
-
-                $column = request()->order[0]['column'];
-                $dir    = request()->order[0]['dir'];
 
                 if (isset($orderMappings[$column])) {
                     $query->orderBy($orderMappings[$column], $dir)
                         ->orderBy('id', 'desc');
                 }
-            });
+            })
+        ->orderBy('created_at', 'desc');
 
         return datatables()->of($datatables)
 
@@ -119,10 +121,8 @@ class CustomerRepository
                     'customer' => $customer
                 ]);
             })
-            ->addColumn('id', function ($customer) {
-                return view('customer::table_partials._id', [
-                    'customer' => $customer
-                ]);
+            ->editColumn('created_at', function ($customer) {
+                return $customer->created_at->format('d M Y H:i');
             })
             ->addColumn('phone', function ($customer) {
                 return view('customer::table_partials._phone', [

@@ -39,28 +39,9 @@
         </div>
         {{-- End Access Log Progress Pipeline --}}
 
-        {{-- Tabs Navigation --}}
-        <ul class="nav nav-pills border-bottom mb-3" id="pills-tab" role="tablist">
-            <li class="nav-item">
-                <a class="nav-link active" id="stats-tab" data-toggle="pill" href="#stats-content" role="tab" aria-controls="stats-content" aria-selected="true">
-                    Statistik
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="invoice-tab" data-toggle="pill" href="#invoice-content" role="tab" aria-controls="invoice-content" aria-selected="false">
-                    Invoice & Langganan
-                </a>
-            </li>
-        </ul>
-
-        {{-- Tabs Content --}}
-        <div class="tab-content" id="pills-tabContent">
-            
-            {{-- Statistik Tab --}}
-            <div class="tab-pane fade show active" id="stats-content" role="tabpanel" aria-labelledby="stats-tab">
-                
-                <!-- Statistics Cards Row 1 -->
-                <div class="row mb-4">
+        {{-- Statistics Cards --}}
+        <!-- Statistics Cards Row 1 -->
+        <div class="row mb-4">
             <div class="col-md-3">
                 <div class="card shadow-sm">
                     <div class="card-body">
@@ -144,25 +125,57 @@
                 </div>
             </div>
         </div>
+        {{-- End Statistics Cards --}}
 
-        <!-- 30-Day Statistics Charts -->
-        <div class="mb-4">
-            <!-- Contacts Chart -->
-            <div class="p-4 border-1 mb-4 shadow-sm">
-                <h5 class="mb-4">30 Hari Terakhir - Contacts</h5>
-                <canvas id="contactsChart"></canvas>
-            </div>
-            <!-- Conversations Chart -->
-            <div class="p-4 border-1 mb-4 shadow-sm">
-                <h5 class="mb-4">30 Hari Terakhir - Conversations</h5>
-                <canvas id="conversationsChart"></canvas>
-            </div>
-            <!-- Tasks Chart -->
-            <div class="p-4 border-1 mb-4 shadow-sm">
-                <h5 class="mb-4">30 Hari Terakhir - Tasks</h5>
-                <canvas id="tasksChart"></canvas>
-            </div>
-        </div>
+        {{-- Tabs Navigation --}}
+        <ul class="nav nav-pills border-bottom mb-3" id="pills-tab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="stats-tab" data-toggle="pill" href="#stats-content" role="tab" aria-controls="stats-content" aria-selected="true">
+                    Statistik
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="invoice-tab" data-toggle="pill" href="#invoice-content" role="tab" aria-controls="invoice-content" aria-selected="false">
+                    Invoice & Langganan
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="onboarding-tab" data-toggle="pill" href="#onboarding-content" role="tab" aria-controls="onboarding-content" aria-selected="false">
+                    Data Onboarding
+                </a>
+            </li>
+        </ul>
+
+        {{-- Tabs Content --}}
+        <div class="tab-content" id="pills-tabContent">
+            
+            {{-- Statistik Tab --}}
+            <div class="tab-pane fade show active" id="stats-content" role="tabpanel" aria-labelledby="stats-tab">
+                
+                <!-- 30-Day Statistics Charts -->
+                <div class="row">
+                    <!-- Contacts Chart -->
+                    <div class="col-12 col-md-6 mb-4">
+                        <div class="p-4 border-1 shadow-sm">
+                            <h5 class="mb-4">30 Hari Terakhir - Contacts</h5>
+                            <canvas id="contactsChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Conversations Chart -->
+                    <div class="col-12 col-md-6 mb-4">
+                        <div class="p-4 border-1 shadow-sm">
+                            <h5 class="mb-4">30 Hari Terakhir - Conversations</h5>
+                            <canvas id="conversationsChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Tasks Chart -->
+                    <div class="col-12 col-md-6 mb-4">
+                        <div class="p-4 border-1 shadow-sm">
+                            <h5 class="mb-4">30 Hari Terakhir - Tasks</h5>
+                            <canvas id="tasksChart"></canvas>
+                        </div>
+                    </div>
+                </div>
 
             </div>{{-- End Statistik Tab --}}
         
@@ -243,6 +256,168 @@
                 </div>
             </div>{{-- End Invoice & Langganan Tab --}}
         
+            {{-- Data Onboarding Tab --}}
+            <div class="tab-pane fade" id="onboarding-content" role="tabpanel" aria-labelledby="onboarding-tab">
+                @if($data['onboarding'])
+                @php
+                    // Prepare data mappings
+                    $businessSectors = [
+                        1 => "Agen / Tengkulak Tambang Timah", 2 => "Apotek / Farmasi", 3 => "Barbershop",
+                        4 => "Bengkel Mobil", 5 => "Cafe", 6 => "Cuci Mobil", 7 => "Digital Printing",
+                        8 => "Fastfood", 9 => "Florist (Toko Bunga)", 10 => "Food Court", 11 => "Foodtruck",
+                        12 => "Internet Service Provider", 13 => "Jasa Katering", 14 => "Jasa Reparasi Lainnya",
+                        15 => "Kedai", 16 => "Klinik", 17 => "Konveksi", 18 => "Other", 19 => "Laundry Pakaian",
+                        20 => "Laundry Sepatu", 21 => "Makanan dan Minuman Keliling", 22 => "Online Seller",
+                        23 => "Petshop", 24 => "Photo Studio", 25 => "Toko Kue (Bakery)", 26 => "Refleksi",
+                        27 => "Rental", 28 => "Rental PS", 29 => "Restoran", 30 => "Retail", 31 => "Salon dan SPA",
+                        32 => "Sewa Lapangan (Badminton / Futsal)", 33 => "Skincare", 34 => "Toko Bahan Bangunan",
+                        35 => "Toko Farmasi", 36 => "Toko Kelontong", 37 => "Toko Komputer, Hp dan Aksesoris",
+                        38 => "Toko Kosmetik", 39 => "Toko Lainnya", 40 => "Toko Makanan dan Minuman Kemasan",
+                        41 => "Toko Obat", 42 => "Toko Perangkat Elektronik", 43 => "Toko Swalayan",
+                        44 => "Toko Tekstil dan Pakaian", 45 => "Usaha Jasa lainnya",
+                        46 => "Usaha Makanan dan Minuman Lainnya", 47 => "Warung dan Kedai Makanan",
+                        48 => "Warung dan Kedai Minuman"
+                    ];
+                    $businessFromOptions = [1 => "1 - 6 Bulan", 2 => "7 - 12 Bulan", 3 => "> 1 Tahun", 4 => "> 2 Tahun"];
+                    $businessProducts = [1 => "Kebutuhan Sehari-hari", 2 => "Bahan Baku & Sparepart", 3 => "Elektronik", 4 => "Lifestyle & Fashion", 5 => "Makanan & Minuman", 6 => "Jasa"];
+                    $crmOptions = [1 => "Manajemen pelanggan", 2 => "Manajemen percakapan", 3 => "Menjangkau pelanggan lebih cepat", 4 => "Mengirim broadcast / campaign", 5 => "Menyatukan chat dari berbagai channel", 6 => "History interaksi pelanggan", 7 => "Meningkatkan respon tim support", 8 => "Meningkatkan produktivitas tim"];
+                    $sourceOptions = ['google' => 'Google', 'sales' => 'Sales Rekonek', 'sosial_media' => 'Sosial Media', 'rekan_partner' => 'Rekan atau Partner Bisnis', 'lainnya' => 'Lainnya'];
+                    
+                    $sectorId = $data['onboarding']['business_sector'] ?? null;
+                    $sectorName = $sectorId ? ($businessSectors[$sectorId] ?? $sectorId) : '-';
+                    $fromId = $data['onboarding']['business_from'] ?? null;
+                    $fromName = $fromId ? ($businessFromOptions[$fromId] ?? $fromId) : '-';
+                    $productId = $data['onboarding']['business_product'] ?? null;
+                    $productName = $productId ? ($businessProducts[$productId] ?? $productId) : '-';
+                    $source = $data['onboarding']['app_source_from'] ?? null;
+                    $sourceName = $source ? ($sourceOptions[$source] ?? $source) : '-';
+                    
+                    $usingCrmFor = $data['onboarding']['using_crm_for'] ?? null;
+                    $crmNeeds = [];
+                    if ($usingCrmFor) {
+                        $ids = is_array($usingCrmFor) ? $usingCrmFor : json_decode($usingCrmFor, true);
+                        if (is_array($ids)) {
+                            foreach ($ids as $id) {
+                                $crmNeeds[] = $crmOptions[$id] ?? $id;
+                            }
+                        }
+                    }
+                @endphp
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0">
+                        {{-- Section: Informasi Usaha --}}
+                        <thead class="thead-light">
+                            <tr>
+                                <th colspan="4" class="text-muted font-weight-bold" style="font-size: 13px;">Informasi Usaha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="text-muted" style="width: 20%;">Nama Pemilik Usaha</td>
+                                <td style="width: 30%;"><strong>{{ $data['onboarding']['business_owner_name'] ?? '-' }}</strong></td>
+                                <td class="text-muted" style="width: 20%;">Nama Usaha</td>
+                                <td style="width: 30%;"><strong>{{ $data['onboarding']['business_name'] ?? '-' }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Bidang Usaha</td>
+                                <td><strong>{{ $sectorName }}</strong></td>
+                                <td class="text-muted">Lama Beroperasi</td>
+                                <td><strong>{{ $fromName }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Provinsi</td>
+                                <td><strong>{{ $data['onboarding']['province_name'] ?? '-' }}</strong></td>
+                                <td class="text-muted">Kota/Kabupaten</td>
+                                <td><strong>{{ $data['onboarding']['city_name'] ?? '-' }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Kecamatan</td>
+                                <td><strong>{{ $data['onboarding']['district_name'] ?? '-' }}</strong></td>
+                                <td class="text-muted">Alamat Lengkap</td>
+                                <td><strong>{{ $data['onboarding']['address'] ?? '-' }}</strong></td>
+                            </tr>
+                        </tbody>
+                        
+                        {{-- Section: Personalisasi --}}
+                        <thead class="thead-light">
+                            <tr>
+                                <th colspan="4" class="text-muted font-weight-bold" style="font-size: 13px;">Personalisasi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="text-muted">Memiliki Bisnis Online?</td>
+                                <td>
+                                    @if($data['onboarding']['is_business_online'] == 1)
+                                        <span class="badge badge-success">Ya</span>
+                                    @else
+                                        <span class="badge badge-secondary">Tidak</span>
+                                    @endif
+                                </td>
+                                <td class="text-muted">Jenis Produk</td>
+                                <td><strong>{{ $productName }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Kebutuhan CRM</td>
+                                <td colspan="3">
+                                    @if(count($crmNeeds) > 0)
+                                        @foreach($crmNeeds as $need)
+                                            <span class="badge badge-info mr-1 mb-1">{{ $need }}</span>
+                                        @endforeach
+                                    @else
+                                        <strong>-</strong>
+                                    @endif
+                                </td>
+                            </tr>
+                        </tbody>
+                        
+                        {{-- Section: Survey --}}
+                        <thead class="thead-light">
+                            <tr>
+                                <th colspan="4" class="text-muted font-weight-bold" style="font-size: 13px;">Survey</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="text-muted">Pernah Menggunakan Aplikasi Lain?</td>
+                                <td>
+                                    @if($data['onboarding']['is_using_any_apps'] == 1)
+                                        <span class="badge badge-success">Ya</span>
+                                    @else
+                                        <span class="badge badge-secondary">Tidak</span>
+                                    @endif
+                                </td>
+                                <td class="text-muted">Mengetahui Rekonek Dari</td>
+                                <td><strong>{{ $sourceName }}</strong></td>
+                            </tr>
+                            @if(($data['onboarding']['is_using_any_apps'] == 1 && $data['onboarding']['business_online_name']) || ($data['onboarding']['app_source_from'] == 'lainnya' && $data['onboarding']['app_source_any']))
+                            <tr>
+                                @if($data['onboarding']['is_using_any_apps'] == 1 && $data['onboarding']['business_online_name'])
+                                <td class="text-muted">Nama Aplikasi</td>
+                                <td><strong>{{ $data['onboarding']['business_online_name'] }}</strong></td>
+                                @else
+                                <td colspan="2"></td>
+                                @endif
+                                @if($data['onboarding']['app_source_from'] == 'lainnya' && $data['onboarding']['app_source_any'])
+                                <td class="text-muted">Keterangan Lainnya</td>
+                                <td><strong>{{ $data['onboarding']['app_source_any'] }}</strong></td>
+                                @else
+                                <td colspan="2"></td>
+                                @endif
+                            </tr>
+                            @endif
+                        </tbody>
+                    </table>
+                </div>
+                @else
+                <div class="alert alert-info">
+                    <i class="mdi mdi-information-outline mr-2"></i>
+                    Data onboarding tidak tersedia untuk customer ini.
+                </div>
+                @endif
+            </div>{{-- End Data Onboarding Tab --}}
+        
         </div>{{-- End Tab Content --}}
 
         <!-- Back Button -->
@@ -258,17 +433,17 @@
             <h5 class="mb-4">Informasi Customer</h5>
             
             <div class="mb-4">
-                <small class="text-muted d-block mb-1">Nama Customer</small>
+                <small class="text-muted d-block mb-1">Nama</small>
                 <strong class="d-block">{{ $data['customer']->name }}</strong>
             </div>
             
             <div class="mb-4">
-                <small class="text-muted d-block mb-1">Email Customer</small>
+                <small class="text-muted d-block mb-1">Email</small>
                 <strong class="d-block">{{ $data['customer']->email ?? 'N/A' }}</strong>
             </div>
             
             <div class="mb-4">
-                <small class="text-muted d-block mb-1">Nomor Telepon</small>
+                <small class="text-muted d-block mb-1">Nomor Hp</small>
                 <strong class="d-block">{{ $data['customer']->phone ?? 'N/A' }}</strong>
             </div>
 
@@ -277,25 +452,22 @@
             <h5 class="mb-4">Informasi Company</h5>
             
             <div class="mb-4">
-                <small class="text-muted d-block mb-1">Company Name</small>
+                <small class="text-muted d-block mb-1">Nama</small>
                 <strong class="d-block">{{ $data['company']->name ?? 'N/A' }}</strong>
             </div>
             
             <div class="mb-4">
-                <small class="text-muted d-block mb-1">Company Phone</small>
+                <small class="text-muted d-block mb-1">Nomor Hp</small>
                 <strong class="d-block">{{ $data['company']->phone ?? 'N/A' }}</strong>
-            </div>
-            
-            <div class="mb-4">
-                <small class="text-muted d-block mb-1">Company Address</small>
-                <strong class="d-block text-break">{{ $data['company']->address ?? 'N/A' }}</strong>
             </div>
             
             <div class="mb-0">
                 <small class="text-muted d-block mb-1">Subscription</small>
-                <span class="badge badge-{{ ($data['company']->is_subscriber ?? false) ? 'primary' : 'secondary' }}">
-                    {{ ($data['company']->is_subscriber ?? false) ? 'Subscribed' : 'Not Subscribed' }}
-                </span>
+                @if($data['subscription'] && $data['subscription']->termin && $data['subscription']->termin_duration)
+                    <span class="badge badge-primary">Langganan</span>
+                @else
+                    <span class="badge badge-secondary">Tidak Langganan</span>
+                @endif
             </div>
         </div>
         
@@ -449,10 +621,6 @@
                                                 <td class="text-right" colspan="4">Biaya Admin</td>
                                                 <td class="text-right" id="modal-admin-fee"></td>
                                             </tr>
-                                            <tr>
-                                                <td class="text-right" colspan="4">PPN <span id="modal-tax-percentage"></span>%</td>
-                                                <td class="text-right" id="modal-tax-amount"></td>
-                                            </tr>
                                             <tr style="background-color: #2465FF !important;">
                                                 <td class="text-right" colspan="4" style="background-color: #2465FF !important;">
                                                     <span class="h6 font-weight-bold text-white mb-0">TOTAL</span>
@@ -602,8 +770,6 @@
                 $('#modal-discount-amount').text('Rp ' + Number(invoice.discount_percentage_amount || 0).toLocaleString('id-ID'));
                 $('#modal-service-fee').text('Rp ' + Number(invoice.service_fee || 0).toLocaleString('id-ID'));
                 $('#modal-admin-fee').text('Rp ' + Number(invoice.admin_fee || 0).toLocaleString('id-ID'));
-                $('#modal-tax-percentage').text(invoice.tax || 0);
-                $('#modal-tax-amount').text('Rp ' + Number(invoice.tax_amount || 0).toLocaleString('id-ID'));
                 $('#modal-total').text('Rp ' + Number(invoice.total).toLocaleString('id-ID'));
                 
                 // Logs

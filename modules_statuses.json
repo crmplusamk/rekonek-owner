@@ -15,11 +15,13 @@
     "Verification": true,
     "WhatsappOtp": true,
     "OtpHistory": true,
-    "Referral": true,
     "DeveloperAccess": true,
     "Payment": true,
     "Deleted": true,
     "Checkout": true,
     "Logs": true,
-    "Voucher": true
+    "Voucher": true,
+    "Affiliator": true,
+    "SettingAffiliator": true,
+    "PromoCode": true
 }

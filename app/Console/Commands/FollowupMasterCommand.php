@@ -26,15 +26,15 @@ class FollowupMasterCommand extends Command
     public function handle()
     {
         $this->info('Running all access log followup commands...');
-        
+
+        // Hanya stage sampai onboarding. whatsapp_connected tidak masuk sini (pipeline UI saja, command-nya terpisah).
         $commands = [
             'followup:request-token',
             'followup:token-verified',
             'followup:registration-success',
             'followup:email-verified',
             'followup:first-login',
-            'followup:onboarding',
-            'followup:subscription-expired'
+            'followup:onboarding'
         ];
 
         foreach ($commands as $command) {

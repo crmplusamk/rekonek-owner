@@ -2,22 +2,25 @@
 
 namespace App\Traits;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 trait AccessLogFollowupTrait
 {
     /**
      * Get sales companies (companies with is_sales = true)
      */
-    protected function getSalesCompanies()
+    /**
+     * Get sales company (company with is_sales = true)
+     */
+    protected function getSalesCompany()
     {
         return DB::connection('client')
             ->table('companies')
             ->where('is_sales', true)
-            ->pluck('id')
-            ->toArray();
+            ->value('id');
     }
 
     /**
@@ -50,36 +53,44 @@ trait AccessLogFollowupTrait
      */
     protected function createTask($data)
     {
-        $taskId = Str::uuid();
-        $now = Carbon::now();
+        try {
+            $taskId = Str::uuid();
+            $now = Carbon::now();
 
-        $taskData = [
-            'id' => $taskId,
-            'name' => $data['name'],
-            'description' => $data['description'],
-            'priority' => $data['priority'] ?? 'medium',
-            'start_date' => $now,
-            'due_date' => $now,
-            'type' => 'follow up',
-            'is_active' => true,
-            'status' => 'not started',
-            'feature' => 'any',
-            'is_customer' => false,
-            'created_method' => 'sistem',
-            'assign_to_id' => $data['assign_to_id'],
-            'contact_id' => $data['contact_id'],
-            'company_id' => $data['company_id'],
-            'created_at' => $now,
-            'created_by' => $data['created_by'],
-            'updated_at' => $now,
-            'is_demo_data' => false
-        ];
+            $taskData = [
+                'id' => $taskId,
+                'name' => $data['name'],
+                'description' => $data['description'],
+                'priority' => $data['priority'] ?? 'medium',
+                'start_date' => $now,
+                'due_date' => $now,
+                'type' => 'follow up',
+                'is_active' => true,
+                'status' => 'not started',
+                'feature' => 'any',
+                'is_customer' => false,
+                'created_method' => 'sistem',
+                'assign_to_id' => $data['assign_to_id'],
+                'contact_id' => $data['contact_id'],
+                'company_id' => $data['company_id'],
+                'created_at' => $now,
+                'created_by' => $data['created_by'],
+                'updated_at' => $now,
+                'is_demo_data' => false,
+            ];
 
-        DB::connection('client')
-            ->table('tasks')
-            ->insert($taskData);
+            DB::connection('client')
+                ->table('tasks')
+                ->insert($taskData);
 
-        return $taskId;
+            return $taskId;
+        } catch (\Exception $e) {
+            Log::error('Failed to create task: '.$e->getMessage(), [
+                'data' => $data,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     /**
@@ -87,27 +98,35 @@ trait AccessLogFollowupTrait
      */
     protected function createFollowup($data)
     {
-        $followupId = Str::uuid();
-        $now = Carbon::now();
+        try {
+            $followupId = Str::uuid();
+            $now = Carbon::now();
 
-        $followupData = [
-            'id' => $followupId,
-            'contact_id' => $data['contact_id'],
-            'tipe' => 'tasks',
-            'tid' => $data['task_id'],
-            'message' => $data['message'],
-            'date' => $now,
-            'due_date' => $now,
-            'created_by' => $data['created_by'],
-            'created_at' => $now,
-            'updated_at' => $now
-        ];
+            $followupData = [
+                'id' => $followupId,
+                'contact_id' => $data['contact_id'],
+                'tipe' => 'tasks',
+                'tid' => $data['task_id'],
+                'message' => $data['message'],
+                'date' => $now,
+                'due_date' => $now,
+                'created_by' => $data['created_by'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
 
-        DB::connection('client')
-            ->table('followups')
-            ->insert($followupData);
+            DB::connection('client')
+                ->table('followups')
+                ->insert($followupData);
 
-        return $followupId;
+            return $followupId;
+        } catch (\Exception $e) {
+            Log::error('Failed to create followup: '.$e->getMessage(), [
+                'data' => $data,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     /**
@@ -121,78 +140,7 @@ trait AccessLogFollowupTrait
             ->update(['tid' => $followupId]);
     }
 
-    /**
-     * Check if customer has progressed beyond a certain stage in last 24 hours
-     */
-    protected function getStuckCustomers($currentStage, $nextStages, $hoursLimit = 24)
-    {
-        $cutoffTime = Carbon::now()->subHours($hoursLimit);
 
-        // Get all customers who have reached current stage
-        $customersAtStage = DB::table('access_logs')
-            ->where('progress', $currentStage)
-            ->where('created_at', '<=', $cutoffTime)
-            ->get();
-
-        $stuckCustomers = [];
-
-        foreach ($customersAtStage as $customer) {
-            // Check if customer has progressed to next stages
-            $hasProgressed = DB::table('access_logs')
-                ->where(function($query) use ($customer) {
-                    if (!empty($customer->company_id)) {
-                        $query->where('company_id', $customer->company_id);
-                    }
-                    if (!empty($customer->email)) {
-                        $query->orWhere('email', $customer->email);
-                    }
-                })
-                ->whereIn('progress', $nextStages)
-                ->exists();
-
-            if (!$hasProgressed) {
-                // Check if we already created a task for this customer at this stage
-                $existingTask = $this->hasExistingFollowupTask($customer, $currentStage);
-                
-                if (!$existingTask) {
-                    $stuckCustomers[] = $customer;
-                }
-            }
-        }
-
-        return $stuckCustomers;
-    }
-
-    /**
-     * Check if followup task already exists for this customer at this stage
-     */
-    protected function hasExistingFollowupTask($customer, $stage)
-    {
-        $salesCompanies = $this->getSalesCompanies();
-        
-        foreach ($salesCompanies as $companyId) {
-            if (!empty($customer->number)) {
-                $contact = $this->getContactByNumber($customer->number, $companyId);
-                
-                if ($contact) {
-                    // Check if task exists for this contact with description containing the stage
-                    $existingTask = DB::connection('client')
-                        ->table('tasks')
-                        ->where('contact_id', $contact->id)
-                        ->where('type', 'follow up')
-                        ->where('description', 'like', '%' . $stage . '%')
-                        ->where('created_at', '>=', Carbon::now()->subDays(1))
-                        ->exists();
-                    
-                    if ($existingTask) {
-                        return true;
-                    }
-                }
-            }
-        }
-        
-        return false;
-    }
 
     /**
      * Get followup messages for different stages
@@ -200,62 +148,84 @@ trait AccessLogFollowupTrait
     protected function getFollowupMessages()
     {
         return [
-            'request_token' => "Halo! Kami melihat Anda telah meminta token verifikasi untuk mendaftar di Retalk. Apakah Anda memerlukan bantuan untuk melanjutkan proses registrasi? 😊",
-            'token_verified' => "Selamat! Token verifikasi Anda sudah berhasil. Yuk lanjutkan proses registrasi untuk menikmati fitur-fitur Retalk yang menarik! 🚀",
-            'registration_success' => "Pendaftaran Anda sudah berhasil! Sekarang silakan cek email Anda untuk verifikasi email agar akun Anda bisa aktif sepenuhnya. 📧",
-            'email_verified_success' => "Email Anda sudah terverifikasi! Sekarang saatnya login pertama kali dan rasakan pengalaman Retalk yang luar biasa! 🎉",
-            'first_login_success' => "Selamat datang di Retalk! Ayo lengkapi proses onboarding untuk memaksimalkan penggunaan platform kami. Ada panduan menarik menunggu Anda! ✨",
-            'onboarding_completed' => "Onboarding selesai! Waktunya mengaktifkan trial gratis Anda untuk menjelajahi semua fitur premium Retalk. Jangan lewatkan kesempatan ini! 🎊"
+            'request_token' => 'Halo! Kami melihat Anda telah meminta token verifikasi untuk mendaftar di Retalk. Apakah Anda memerlukan bantuan untuk melanjutkan proses registrasi? 😊',
+            'token_verified' => 'Selamat! Token verifikasi Anda sudah berhasil. Yuk lanjutkan proses registrasi untuk menikmati fitur-fitur Retalk yang menarik! 🚀',
+            'registration_success' => 'Pendaftaran Anda sudah berhasil! Sekarang silakan cek email Anda untuk verifikasi email agar akun Anda bisa aktif sepenuhnya. 📧',
+            'email_verified_success' => 'Email Anda sudah terverifikasi! Sekarang saatnya login pertama kali dan rasakan pengalaman Retalk yang luar biasa! 🎉',
+            'first_login_success' => 'Selamat datang di Retalk! Ayo lengkapi proses onboarding untuk memaksimalkan penggunaan platform kami. Ada panduan menarik menunggu Anda! ✨',
+            'onboarding_completed' => 'Onboarding selesai! Waktunya mengaktifkan trial gratis Anda untuk menjelajahi semua fitur premium Retalk. Jangan lewatkan kesempatan ini! 🎊',
         ];
     }
 
     /**
      * Process stuck customers for a specific stage
      */
-    protected function processStuckCustomers($stage, $nextStages, $taskName, $taskDescription)
+    /**
+     * Process single stuck customer from AccessLog
+     */
+    /**
+     * Process single stuck customer from AccessLog
+     */
+    protected function processStuckCustomers($accessLog, $taskName, $taskDescription)
     {
-        $stuckCustomers = $this->getStuckCustomers($stage, $nextStages);
-        $salesCompanies = $this->getSalesCompanies();
+        Log::info("Processing stuck customer: {$accessLog->email} at stage: {$accessLog->progress}");
+
+        $salesCompanyId = $this->getSalesCompany();
         $messages = $this->getFollowupMessages();
         $processedCount = 0;
 
-        foreach ($stuckCustomers as $customer) {
-            foreach ($salesCompanies as $companyId) {
-                if (!empty($customer->number)) {
-                    $contact = $this->getContactByNumber($customer->number, $companyId);
-                    $admin = $this->getAdminUser($companyId);
+        if (!$salesCompanyId) {
+            Log::error("CRITICAL: Sales Company with is_sales=true NOT FOUND. Cannot process followup for {$accessLog->email}.");
+            return 0;
+        }
 
-                    if ($contact && $admin) {
-                        try {
-                            // Create task
-                            $taskId = $this->createTask([
-                                'name' => $taskName,
-                                'description' => $taskDescription . ' (' . $customer->email . ')',
-                                'assign_to_id' => $admin->id,
-                                'contact_id' => $contact->id,
-                                'company_id' => $companyId,
-                                'created_by' => $admin->id
-                            ]);
+        // Priority 1: Check by Number (most reliable for direct contact)
+        $contact = null;
+        if (!empty($accessLog->number)) {
+            $contact = $this->getContactByNumber($accessLog->number, $salesCompanyId);
+        }
+        
+        // Logic admin
+        $admin = $this->getAdminUser($salesCompanyId);
 
-                            // Create followup
-                            $followupId = $this->createFollowup([
-                                'contact_id' => $contact->id,
-                                'task_id' => $taskId,
-                                'message' => $messages[$stage] ?? 'Follow up diperlukan untuk melanjutkan proses.',
-                                'created_by' => $admin->id
-                            ]);
+        if (!$admin) {
+            Log::error("CRITICAL: Admin user not found for Sales Company ID: {$salesCompanyId}. Cannot assign task for {$accessLog->email}.");
+            return 0;
+        }
 
-                            // Update task with followup ID
-                            $this->updateTaskWithFollowupId($taskId, $followupId);
+        if (!$contact) {
+            Log::warning("SKIPPING: Contact not found in Sales CRM for number: {$accessLog->number} (Email: {$accessLog->email}). Check if contact sync is working.");
+            return 0;
+        }
 
-                            $processedCount++;
-                            $this->info("Created followup task for {$customer->email} at stage {$stage}");
-                            break; // Move to next customer after successful creation
-                        } catch (\Exception $e) {
-                            $this->error("Error creating task for {$customer->email}: " . $e->getMessage());
-                        }
-                    }
-                }
+        if ($contact && $admin) {
+            try {
+                $taskId = $this->createTask([
+                    'name' => $taskName,
+                    'description' => $taskDescription . ' (' . ($accessLog->email ?? $accessLog->number) . ')',
+                    'assign_to_id' => $admin->id,
+                    'contact_id' => $contact->id,
+                    'company_id' => $salesCompanyId,
+                    'created_by' => $admin->id
+                ]);
+
+                $followupId = $this->createFollowup([
+                    'contact_id' => $contact->id,
+                    'task_id' => $taskId,
+                    'message' => $messages[$accessLog->progress] ?? 'Follow up diperlukan untuk melanjutkan proses.',
+                    'created_by' => $admin->id
+                ]);
+
+                $this->updateTaskWithFollowupId($taskId, $followupId);
+                
+                // Mark this specific log as processed
+                $accessLog->update(['followup_sent' => true]);
+                
+                $processedCount++;
+                Log::info("SUCCESS: Created followup task for {$accessLog->email} task_id={$taskId}");
+
+            } catch (\Exception $e) {
+                Log::error("EXCEPTION: Error creating task for {$accessLog->email}: " . $e->getMessage());
             }
         }
 

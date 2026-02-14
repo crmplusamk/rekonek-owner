@@ -1,0 +1,11 @@
+{
+    "name": "Affiliator",
+    "alias": "affiliator",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Affiliator\\App\\Providers\\AffiliatorServiceProvider"
+    ],
+    "files": []
+}

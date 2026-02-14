@@ -21,7 +21,6 @@ class ContactRepository
             'is_active' => $request['is_active'] ?? false,
             'is_customer' => $request['is_customer'] ?? false,
             'verification_code' => $request['verification_code'] ?? null,
-            'referral_code' => $request['referral_code'] ?? null,
         ]);
 
         return $data;
