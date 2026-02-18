@@ -38,6 +38,7 @@
                             <th data-orderable="false" class="td-checkbox"><input type="checkbox" id="checkAll"></th>
                             <th class="text-center">Nama</th>
                             <th class="text-center">Email</th>
+                            <th class="text-center">Kode Promo</th>
                             <th data-orderable="false" class="text-center">Action</th>
                         </tr>
                     </thead>
@@ -85,9 +86,10 @@ $(document).ready(function() {
                 { data: 'checkbox', orderable: false },
                 { data: 'name' },
                 { data: 'email' },
+                { data: 'promo_code' },
                 { data: 'action', orderable: false }
             ],
-            columnDefs: [{ className: 'dt-center', targets: [0, 1, 2, 3] }],
+            columnDefs: [{ className: 'dt-center', targets: [0, 1, 2, 3, 4] }],
             dom: 'lrtip',
             order: [[1, 'asc']],
             length: 10,

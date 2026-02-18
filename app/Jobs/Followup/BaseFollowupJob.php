@@ -53,18 +53,11 @@ abstract class BaseFollowupJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $processedCount = $this->processStuckCustomers(
+        $this->processStuckCustomers(
             $this->accessLog,
             $this->taskName,
             $this->taskDescription
         );
-
-        if ($processedCount > 0) {
-            $this->markFollowupSent((object) [
-                'company_id' => $this->accessLog->company_id,
-                'email' => $this->accessLog->email,
-            ], $this->currentStage);
-        }
     }
 
     protected function hasProgressed(string $customerKey): bool

@@ -106,6 +106,42 @@ class SettingAffiliatorController extends Controller
         }
     }
 
+    /**
+     * Reporting usage promo code per affiliator (UI dummy).
+     */
+    public function usage($id)
+    {
+        $user = User::whereHas('roles', function ($q) {
+            $q->whereRaw("trim(name) = ?", ['affiliator'])->orWhere('name', 'affiliator');
+        })->with(['promoCodesAsAffiliator' => fn ($q) => $q->select('id', 'code', 'affiliator_user_id')])
+            ->findOrFail($id);
+
+        $config = AffiliatorConfig::where('user_id', $user->id)->first();
+
+        // Dummy data for UI only
+        $firstCode = $user->promoCodesAsAffiliator->first();
+        $codeStr = $firstCode ? $firstCode->code : 'PROMO1';
+        $pctReg = $config ? (float) $config->commission_value_registrasi : 10;
+        $pctPer = $config ? (float) $config->commission_value_perpanjangan : 5;
+
+        $dummyUsageRegistrasi = [
+            ['date' => '2025-02-14 10:30', 'code' => $codeStr, 'customer' => 'PT Contoh Registrasi A', 'amount' => 2500000, 'commission_pct' => $pctReg, 'commission_amount' => 250000],
+            ['date' => '2025-02-13 14:00', 'code' => $codeStr, 'customer' => 'CV Sample Baru', 'amount' => 1500000, 'commission_pct' => $pctReg, 'commission_amount' => 150000],
+            ['date' => '2025-02-12 09:15', 'code' => $codeStr, 'customer' => 'Company XYZ', 'amount' => 3200000, 'commission_pct' => $pctReg, 'commission_amount' => 320000],
+        ];
+        $dummyUsagePerpanjangan = [
+            ['date' => '2025-02-14 11:00', 'code' => $codeStr, 'customer' => 'PT Pelanggan Lama', 'amount' => 1200000, 'commission_pct' => $pctPer, 'commission_amount' => 60000],
+            ['date' => '2025-02-13 16:30', 'code' => $codeStr, 'customer' => 'CV Renewal Inc', 'amount' => 2400000, 'commission_pct' => $pctPer, 'commission_amount' => 120000],
+        ];
+
+        return view('settingaffiliator::usage', [
+            'user' => $user,
+            'config' => $config,
+            'usageRegistrasi' => $dummyUsageRegistrasi,
+            'usagePerpanjangan' => $dummyUsagePerpanjangan,
+        ]);
+    }
+
     public function getConfig($id): JsonResponse
     {
         $user = User::whereHas('roles', function ($q) {
@@ -156,7 +192,8 @@ class SettingAffiliatorController extends Controller
     {
         $query = User::whereHas('roles', function ($q) {
             $q->whereRaw("trim(name) = ?", ['affiliator'])->orWhere('name', 'affiliator');
-        });
+        })->with(['promoCodesAsAffiliator' => fn ($q) => $q->select('id', 'code', 'affiliator_user_id')]);
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -169,6 +206,7 @@ class SettingAffiliatorController extends Controller
             ->addColumn('checkbox', fn ($user) => view('settingaffiliator::table_partials._checkbox', ['user' => $user]))
             ->addColumn('name', fn ($user) => view('settingaffiliator::table_partials._name', ['user' => $user]))
             ->addColumn('email', fn ($user) => view('settingaffiliator::table_partials._email', ['user' => $user]))
+            ->addColumn('promo_code', fn ($user) => view('settingaffiliator::table_partials._promo_code', ['user' => $user]))
             ->addColumn('action', fn ($user) => view('settingaffiliator::table_partials._action', ['user' => $user]))
             ->rawColumns(['checkbox', 'action'])
             ->make(true);
