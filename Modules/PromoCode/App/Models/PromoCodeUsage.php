@@ -18,6 +18,7 @@ class PromoCodeUsage extends Model
         'discount_amount' => 'decimal:2',
         'purchase_amount' => 'decimal:2',
         'metadata' => 'array',
+        'is_ref' => 'boolean',
     ];
 
     public function promoCode()

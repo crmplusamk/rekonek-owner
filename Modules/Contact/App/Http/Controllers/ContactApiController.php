@@ -13,6 +13,8 @@ use Modules\Package\App\Repositories\PackageRepository;
 use Modules\Payment\App\Repositories\PaymentRepository;
 use Modules\Subscription\App\Repositories\SubscriptionRepository;
 use Modules\WhatsappOtp\App\Models\WhatsappOtpSession;
+use Modules\PromoCode\App\Models\PromoCode;
+use Modules\PromoCode\App\Models\PromoCodeUsage;
 use App\Services\AccessLogService;
 
 class ContactApiController extends Controller
@@ -52,6 +54,30 @@ class ContactApiController extends Controller
 
             $customer = $this->contactRepo->create($request->all());
 
+            // Handle promo code usage if provided (from ref query param or manual input)
+            if ($request->promo_code) {
+                $promoCode = PromoCode::where('code', $request->promo_code)->first();
+                
+                if ($promoCode && $promoCode->isAvailable()) {
+                    PromoCodeUsage::create([
+                        'promo_code_id' => $promoCode->id,
+                        'customer_id' => null, // Not yet a customer, will be updated after activation
+                        'company_id' => $customer->company_id,
+                        'contact_id' => $customer->id,
+                        'discount_amount' => null,
+                        'purchase_amount' => null,
+                        'metadata' => [
+                            'source' => 'registration',
+                            'email' => $customer->email,
+                        ],
+                        'is_ref' => true, // Mark as referral/promo from registration
+                    ]);
+
+                    // Increment promo code usage count
+                    $promoCode->increment('used_count');
+                }
+            }
+
             $this->accessLogService->create([
                 'email' => $request->email ?? null,
                 'progress' => 'registration_success',
@@ -65,6 +91,7 @@ class ContactApiController extends Controller
                     'email' => $request->email ?? null,
                     'number' => $request->phone ?? null,
                     'company_id' => $request->company_id ?? null,
+                    'promo_code' => $request->promo_code ?? null,
                 ],
                 'action' => 'register',
                 'activity_type' => 'account_registration',
