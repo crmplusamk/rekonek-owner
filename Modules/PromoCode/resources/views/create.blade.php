@@ -43,14 +43,9 @@
                                     <span class="input-group-text bg-light text-muted"><i class="mdi mdi-ticket-percent"></i></span>
                                 </div>
                                 <input type="text" class="form-control text-uppercase font-weight-bold @error('code') is-invalid @enderror" name="code" id="code" value="{{ old('code') }}" placeholder="CONTOH: PROMO2024" required maxlength="50" style="letter-spacing: 1px;">
-                                <div class="input-group-append">
-                                    <button type="button" class="btn btn-outline-primary" id="btnGenerateCode" title="Generate kode acak">
-                                        <i class="mdi mdi-refresh"></i> Generate Code
-                                    </button>
-                                </div>
                             </div>
                             @error('code')<small class="text-danger mt-1 d-block">{{ $message }}</small>@enderror
-                            <small class="form-text text-muted">Kode unik yang akan dimasukkan pengguna (Otomatis kapital). Klik "Generate Code" untuk isi otomatis.</small>
+                            <small class="form-text text-muted">Kode unik yang akan dimasukkan pengguna (Otomatis kapital).</small>
                         </div>
                         <div class="col-md-6 form-group">
                             <label for="type" class="font-weight-bold">Tipe Promo</label>
@@ -275,18 +270,6 @@
 <script>
 $(document).ready(function() {
     $('#code').on('input', function() { $(this).val($(this).val().toUpperCase()); });
-
-    // Generate random promo code (A-Z, 2-9, 8 chars - hindari 0,O,1,I,L agar mudah dibaca)
-    var PROMO_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    var PROMO_LENGTH = 8;
-    function generatePromoCode() {
-        var code = '';
-        for (var i = 0; i < PROMO_LENGTH; i++) {
-            code += PROMO_CHARS.charAt(Math.floor(Math.random() * PROMO_CHARS.length));
-        }
-        $('#code').val(code).trigger('input');
-    }
-    $('#btnGenerateCode').on('click', generatePromoCode);
 
     function toggleAffiliatorBlock() {
         var isAffiliator = ($('#type').val() === 'affiliator');

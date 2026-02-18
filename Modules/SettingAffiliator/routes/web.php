@@ -19,8 +19,6 @@ Route::middleware(['auth'])->group(function () {
         ->name('setting-affiliator.index');
     Route::get('setting-affiliator/get-datatable', [SettingAffiliatorController::class, 'datatable'])
         ->name('setting-affiliator.table');
-    Route::get('setting-affiliator/{id}/usage', [SettingAffiliatorController::class, 'usage'])
-        ->name('setting-affiliator.usage');
     Route::post('setting-affiliator', [SettingAffiliatorController::class, 'store'])
         ->name('setting-affiliator.store');
     Route::put('setting-affiliator/{id}', [SettingAffiliatorController::class, 'update'])

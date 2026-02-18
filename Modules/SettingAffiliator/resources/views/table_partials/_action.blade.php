@@ -2,9 +2,6 @@
     <i class="mdi mdi-dots-horizontal mdi-24px"></i>
 </a>
 <div class="dropdown-menu dropdown-menu-right">
-    <a class="dropdown-item" href="{{ route('setting-affiliator.usage', $user->id) }}">
-        <i class="mdi mdi-chart-bar"></i> Reporting Usage
-    </a>
     <a class="dropdown-item btn-config-affiliator pointer" href="javascript:void(0)" data-id="{{ $user->id }}" data-name="{{ $user->name }}">
         <i class="mdi mdi-settings"></i> Konfigurasi Komisi
     </a>

@@ -47,12 +47,4 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
-
-    /**
-     * Promo codes assigned to this user as affiliator.
-     */
-    public function promoCodesAsAffiliator()
-    {
-        return $this->hasMany(\Modules\PromoCode\App\Models\PromoCode::class, 'affiliator_user_id');
-    }
 }

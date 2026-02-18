@@ -128,7 +128,7 @@ class ContactApiController extends Controller
             $package = $this->packageRepo->getByName('Free');
 
             /** create subs */
-            $this->subsRepo->create([
+            $subs = $this->subsRepo->create([
                 'package_id' => $package->id,
                 'customer_id' => $customer->id,
                 'is_active' => true,
@@ -187,7 +187,7 @@ class ContactApiController extends Controller
             DB::commit();
 
             // Send greeting message to customer after successful email verification
-            // $this->sendGreetingMessage($customer->phone, $customer->name ?? 'Customer');
+            $this->sendGreetingMessage($customer->phone, $customer->name ?? 'Customer');
 
             return response()->json([
                 'success' => true,
@@ -198,6 +198,7 @@ class ContactApiController extends Controller
         } catch (\Throwable $e) {
 
             DB::rollBack();
+
             return response()->json([
                 'error' => true,
                 'message' => $e->getMessage(),

@@ -72,13 +72,11 @@ class AccessLogService
         $config = $this->followupConfig[$progress];
 
         try {
-            
             $jobClass = $config['job'];
             $delay = null;
 
             if (isset($config['delay_hours'])) {
                 $delay = now()->addHours($config['delay_hours']);
-
             } elseif (isset($config['delay_minutes'])) {
                 $delay = now()->addMinutes($config['delay_minutes']);
             }
@@ -90,10 +88,9 @@ class AccessLogService
             }
 
             dispatch($job);
+
             Log::info("Followup job dispatched for progress={$progress}, customer=".($log->company_id ?? $log->email ?? $log->id));
-
         } catch (\Exception $e) {
-
             Log::error('Failed to dispatch followup job: '.$e->getMessage(), [
                 'progress' => $progress,
                 'log_id' => $log->id,
