@@ -29,14 +29,14 @@
 
     Pusher.logToConsole = true;
 
-    const connection = new Pusher('{{ env("PUSHER_APP_KEY") }}', {
-        cluster: '{{ env("PUSHER_APP_CLUSTER") }}',
+    const connection = new Pusher('{{ config("broadcasting.connections.pusher.key") }}', {
+        cluster: '{{ config("broadcasting.connections.pusher.options.cluster") }}',
         encrypted: true,
-        wsHost: '{{ env("PUSHER_APP_HOST") }}',
-        wsPort: '{{ env("PUSHER_APP_PORT") }}',
-        wssPort: '{{ env("PUSHER_APP_PORT") }}',
+        wsHost: '{{ config("broadcasting.connections.pusher.options.host") }}',
+        wsPort: '{{ config("broadcasting.connections.pusher.options.port") }}',
+        wssPort: '{{ config("broadcasting.connections.pusher.options.port") }}',
         enabledTransports: ['ws'],
-        forceTLS: '{{ env("PUSHER_APP_SCHEME") }}' == 'https' ? true : false,
+        forceTLS: '{{ config("broadcasting.connections.pusher.options.scheme") }}' == 'https' ? true : false,
         channelAuthorization: {
             endpoint: "/broadcasting/auth",
         },
