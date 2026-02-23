@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Log;
 use Modules\Addon\App\Repositories\AddonRepository;
 use Modules\Checkout\App\Services\MidtransService;
 use Modules\Customer\App\Repositories\CustomerRepository;
+use Modules\PromoCode\App\Models\PromoCode;
+use Modules\PromoCode\App\Models\PromoCodeUsage;
 use Modules\Invoices\App\Repositories\InvoiceRepository;
 use Modules\Logs\App\Services\LogService;
 use Modules\Package\App\Repositories\PackageRepository;
@@ -68,16 +70,30 @@ class CheckoutApiController extends Controller
             if (count($items) != count($request->items)) return response()->json(["error" => true, "message" => "Not Found"], 404);
 
             /** calculate price */
-            $calculate = $this->packageSrv->calculateTotal($subtotal);
+            $promoDiscount = 0;
+            $appliedPromoCode = null;
+            if ($request->filled('promo_code')) {
+                $promoCodeModel = PromoCode::where('code', $request->promo_code)->first();
+                if ($promoCodeModel && $promoCodeModel->isAvailable() && $promoCodeModel->canBeUsedBy($customer->id, $request->company_id)) {
+                    $isRenew = $request->whenFilled('is_renew', fn () => $request->boolean('is_renew'), fn () => $request->boolean('is_subscriber'));
+                    $useRegistrasi = $isRenew === false;
+                    $promoDiscount = $promoCodeModel->calculateDiscountForContext((float) $subtotal, $useRegistrasi);
+                    if ($promoDiscount > 0) {
+                        $appliedPromoCode = $promoCodeModel;
+                    }
+                }
+            }
 
-            // promo_code diterima dari request tetapi belum di-handle (perhitungan diskon & usage nanti)
-            // if ($request->filled('promo_code')) { ... }
+            $totalAfterDiscount = (int) floor($subtotal - $promoDiscount);
+            $calculate = $this->packageSrv->calculateTotal($subtotal);
+            $calculate['total'] = max(0, $totalAfterDiscount);
+            $calculate['subtotal'] = (int) $subtotal;
 
             /** get invoice type from request, default to 'new' for package checkout */
             $invoiceType = $request->input('type', 'new');
 
-            /** create invoices */
-            $invoice = $this->invoiceRepo->create([
+            /** create invoices (promo usage dicatat saat invoice lunas, bukan di sini) */
+            $invoicePayload = [
                 'customer_id' => $customer->id,
                 'customer_name' => $request->customer_name,
                 'customer_email' => $request->customer_email,
@@ -89,20 +105,48 @@ class CheckoutApiController extends Controller
                 'tax_amount' => $calculate['tax_amount'],
                 'discount_percentage' => 0,
                 'discount_percentage_amount' => 0,
-                'discount_amount' => 0,
+                'discount_amount' => $promoDiscount,
                 'admin_fee' => 0,
                 'service_fee' => 0,
                 'subtotal' => $calculate['subtotal'],
                 'total' => $calculate['total'],
                 'type' => $invoiceType,
                 'is_status' => 1, /** terkonfirmasi */
-                'is_paid' => 0, /** belum dibayar */
+                'is_paid' => 0,
                 'payment_date' => null,
                 'payment_method' => null,
                 'payment_total' => 0,
                 'company_id' => $request->company_id,
                 'items' => $items
-            ]);
+            ];
+            if ($appliedPromoCode) {
+                $invoicePayload['promo_code_id'] = $appliedPromoCode->id;
+                $invoicePayload['promo_usage_status'] = ($request->whenFilled('is_renew', fn () => $request->boolean('is_renew'), fn () => $request->boolean('is_subscriber'))) ? 'P' : 'B'; // P = perpanjangan, B = register/baru
+            }
+            $invoice = $this->invoiceRepo->create($invoicePayload);
+
+            $totalAmount = (int) $calculate['total'];
+            if ($totalAmount <= 0) {
+                /** Total 0 (diskon penuh): skip Midtrans, mark invoice lunas & aktifkan langganan; usage dicatat di sini */
+                $this->markAsPaidAndActivateSubscription($invoice);
+                LogService::create([
+                    'fid' => $invoice->id,
+                    'category' => 'order',
+                    'title' => 'Membuat Invoice',
+                    'note' => "Membuat data invoice dengan kode {$invoice->code} (gratis / lunas oleh diskon promo)",
+                    'company_id' => $invoice->company_id
+                ]);
+                DB::commit();
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Ok',
+                    "data" => [
+                        "invoiceId" => $invoice->id,
+                        "snapToken" => null,
+                        "paidDirectly" => true,
+                    ],
+                ], 200);
+            }
 
             /** create payment and snap token */
             $setOrder = $this->midtransSrv->setOrder($invoice->code);
@@ -167,17 +211,31 @@ class CheckoutApiController extends Controller
 
             if (count($items) != count($request->items)) return response()->json(["error" => true, "message" => "Not Found"], 404);
 
-            /** calculate price */
-            $calculate = $this->packageSrv->calculateTotal($subtotal);
+            /** calculate price & promo */
+            $promoDiscount = 0;
+            $appliedPromoCode = null;
+            if ($request->filled('promo_code')) {
+                $promoCodeModel = PromoCode::where('code', $request->promo_code)->first();
+                if ($promoCodeModel && $promoCodeModel->isAvailable() && $promoCodeModel->canBeUsedBy($customer->id, $request->company_id)) {
+                    $isRenew = $request->whenFilled('is_renew', fn () => $request->boolean('is_renew'), fn () => $request->boolean('is_subscriber'));
+                    $useRegistrasi = $isRenew === false;
+                    $promoDiscount = $promoCodeModel->calculateDiscountForContext((float) $subtotal, $useRegistrasi);
+                    if ($promoDiscount > 0) {
+                        $appliedPromoCode = $promoCodeModel;
+                    }
+                }
+            }
 
-            // promo_code diterima dari request tetapi belum di-handle (perhitungan diskon & usage nanti)
-            // if ($request->filled('promo_code')) { ... }
+            $totalAfterDiscount = (int) floor($subtotal - $promoDiscount);
+            $calculate = $this->packageSrv->calculateTotal($subtotal);
+            $calculate['total'] = max(0, $totalAfterDiscount);
+            $calculate['subtotal'] = (int) $subtotal;
 
             /** get invoice type from request, default to 'addon' for addon checkout */
             $invoiceType = $request->input('type', 'addon');
 
-            /** create invoices */
-            $invoice = $this->invoiceRepo->create([
+            /** create invoices (promo usage dicatat saat invoice lunas, bukan di sini) */
+            $invoicePayload = [
                 'customer_id' => $customer->id,
                 'customer_name' => $request->customer_name,
                 'customer_email' => $request->customer_email,
@@ -189,20 +247,48 @@ class CheckoutApiController extends Controller
                 'tax_amount' => $calculate['tax_amount'],
                 'discount_percentage' => 0,
                 'discount_percentage_amount' => 0,
-                'discount_amount' => 0,
+                'discount_amount' => $promoDiscount,
                 'admin_fee' => 0,
                 'service_fee' => 0,
                 'subtotal' => $calculate['subtotal'],
                 'total' => $calculate['total'],
                 'type' => $invoiceType,
-                'is_status' => 1, /** terkonfirmasi */
-                'is_paid' => 0, /** belum dibayar */
+                'is_status' => 1,
+                'is_paid' => 0,
                 'payment_date' => null,
                 'payment_method' => null,
                 'payment_total' => 0,
                 'company_id' => $request->company_id,
                 'items' => $items
-            ]);
+            ];
+            if ($appliedPromoCode) {
+                $invoicePayload['promo_code_id'] = $appliedPromoCode->id;
+                $invoicePayload['promo_usage_status'] = ($request->whenFilled('is_renew', fn () => $request->boolean('is_renew'), fn () => $request->boolean('is_subscriber'))) ? 'P' : 'B';
+            }
+            $invoice = $this->invoiceRepo->create($invoicePayload);
+
+            $totalAmount = (int) $calculate['total'];
+            if ($totalAmount <= 0) {
+                /** Total 0: mark invoice lunas & aktifkan langganan; usage dicatat di sini */
+                $this->markAsPaidAndActivateSubscription($invoice);
+                LogService::create([
+                    'fid' => $invoice->id,
+                    'category' => 'order',
+                    'title' => 'Membuat Invoice',
+                    'note' => "Membuat data invoice dengan kode {$invoice->code} (gratis / lunas oleh diskon promo)",
+                    'company_id' => $invoice->company_id
+                ]);
+                DB::commit();
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Ok',
+                    "data" => [
+                        "invoiceId" => $invoice->id,
+                        "snapToken" => null,
+                        "paidDirectly" => true,
+                    ],
+                ], 200);
+            }
 
             /** create payment and snap token */
             $setOrder = $this->midtransSrv->setOrder($invoice->code);
@@ -407,6 +493,143 @@ class CheckoutApiController extends Controller
         }
     }
 
+    /**
+     * Mark invoice as paid (total 0 / gratis) and activate subscription (no Midtrans).
+     */
+    private function markAsPaidAndActivateSubscription($invoice)
+    {
+        $this->invoiceRepo->update($invoice, [
+            'is_paid' => 1,
+            'is_status' => 2,
+            'payment_total' => $invoice->total,
+            'payment_method' => 'Free',
+            'payment_date' => now(),
+        ]);
+
+        $client = DB::table('contacts')->where('company_id', $invoice->company_id)->first();
+        if (! $client) {
+            return;
+        }
+
+        $invoice->load('items');
+        $invoiceType = $invoice->type ?? 'new';
+        $subsPackage = $invoice->items->where('itemable_type', 'Modules\Package\App\Models\Package')->first();
+        $subsAddons = $invoice->items->where('itemable_type', 'Modules\Addon\App\Models\Addon');
+
+        if ($invoiceType === 'new') {
+            $deletedPackages = SubscriptionPackage::where('company_id', $invoice->company_id)->delete();
+            $deletedAddons = SubscriptionAddon::where('company_id', $invoice->company_id)->delete();
+            LogService::create([
+                'fid' => $invoice->id,
+                'category' => 'subscription',
+                'title' => 'Menghapus Langganan Lama',
+                'note' => "Menghapus langganan lama untuk invoice {$invoice->code} (gratis)",
+                'company_id' => $invoice->company_id
+            ]);
+        }
+
+        if ($subsPackage) {
+            $dataSubsPackage = $this->subscriptionSrv->updatePackage([
+                'customer_id' => $client->id,
+                'package_id' => $subsPackage->itemable_id,
+                'termin_duration' => $subsPackage->duration,
+                'termin' => $subsPackage->duration_type,
+                'started_at' => $subsPackage->start_date,
+                'expired_at' => $subsPackage->end_date,
+                'is_active' => true,
+                'company_id' => $invoice->company_id
+            ]);
+            $logTitle = $invoiceType === 'new' ? 'Membuat Langganan Baru' : 'Upgrade Langganan';
+            LogService::create([
+                'fid' => $dataSubsPackage->id,
+                'category' => 'subscription',
+                'title' => $logTitle,
+                'note' => "Langganan {$dataSubsPackage->package->name} (gratis / diskon 100%)",
+                'company_id' => $invoice->company_id
+            ]);
+        }
+
+        foreach ($subsAddons as $subsAddon) {
+            $dataSubsAddon = $this->subscriptionSrv->updateAddon([
+                'customer_id' => $client->id,
+                'addon_id' => $subsAddon->itemable_id,
+                'charge' => $subsAddon->charge,
+                'additional_charge' => $subsAddon->additional_charge ?? 0,
+                'started_at' => $subsAddon->start_date,
+                'expired_at' => $subsAddon->end_date,
+                'is_active' => true,
+                'company_id' => $invoice->company_id
+            ]);
+            $logTitle = $invoiceType === 'addon' ? 'Menambahkan Addon' : 'Menambahkan Addon (Paket Baru)';
+            LogService::create([
+                'fid' => $dataSubsAddon->id,
+                'category' => 'subscription',
+                'title' => $logTitle,
+                'note' => "Addon {$dataSubsAddon->addon->name} (gratis)",
+                'company_id' => $invoice->company_id
+            ]);
+        }
+
+        LogService::create([
+            'fid' => $invoice->id,
+            'category' => 'order',
+            'title' => 'Invoice Lunas (Gratis)',
+            'note' => "Invoice {$invoice->code} lunas oleh diskon promo, langganan telah diaktifkan",
+            'company_id' => $invoice->company_id
+        ]);
+
+        $this->recordPromoUsageForInvoice($invoice);
+        $this->markCompanyRenewOnClient($invoice->company_id);
+    }
+
+    /**
+     * Set companies.is_renew = true di database Retalk (client) agar transaksi berikutnya pakai promo perpanjangan.
+     */
+    private function markCompanyRenewOnClient(?string $companyId): void
+    {
+        if (! $companyId) {
+            return;
+        }
+        try {
+            DB::connection('client')->table('companies')->where('id', $companyId)->update(['is_renew' => true]);
+        } catch (\Throwable $e) {
+            Log::warning('Checkout: gagal update company is_renew di client DB: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Catat promo code usage saat invoice lunas (idempotent: satu usage per invoice per promo).
+     * Dipanggil dari paymentSettlement (bayar via Midtrans) dan markAsPaidAndActivateSubscription (total 0).
+     */
+    private function recordPromoUsageForInvoice($invoice): void
+    {
+        if (! $invoice->promo_code_id) {
+            return;
+        }
+
+        $source = ($invoice->type ?? 'new') === 'addon' ? 'checkout_addon' : 'checkout_package';
+        $usage = PromoCodeUsage::firstOrCreate(
+            [
+                'promo_code_id' => $invoice->promo_code_id,
+                'invoice_id' => $invoice->id,
+            ],
+            [
+                'customer_id' => $invoice->customer_id,
+                'company_id' => $invoice->company_id,
+                'contact_id' => null,
+                'discount_amount' => $invoice->discount_amount,
+                'purchase_amount' => $invoice->subtotal,
+                'metadata' => ['source' => $source, 'invoice_id' => $invoice->id],
+                'is_ref' => false,
+                'status' => $invoice->promo_usage_status ?? null,
+            ]
+        );
+
+        if ($usage->wasRecentlyCreated) {
+            PromoCode::where('id', $invoice->promo_code_id)->increment('used_count');
+        }
+    }
+
     private function paymentPending($invoice, $request)
     {
         $payment = $this->paymentRepo->findByOrderId($request->order_id);
@@ -543,6 +766,9 @@ class CheckoutApiController extends Controller
                 ]);
             }
         }
+
+        $this->recordPromoUsageForInvoice($invoice);
+        $this->markCompanyRenewOnClient($invoice->company_id);
     }
 
     private function paymentError($request, $status)

@@ -38,6 +38,7 @@
                             <th data-orderable="false" class="td-checkbox"><input type="checkbox" id="checkAll"></th>
                             <th class="text-center">Nama</th>
                             <th class="text-center">Email</th>
+                            <th class="text-center">Promo Code</th>
                             <th data-orderable="false" class="text-center">Action</th>
                         </tr>
                     </thead>
@@ -51,6 +52,7 @@
 @include('settingaffiliator::modals._create')
 @include('settingaffiliator::modals._edit')
 @include('settingaffiliator::modals._config')
+@include('settingaffiliator::modals._promo_codes_detail')
 @endsection
 
 @push('head')
@@ -85,9 +87,10 @@ $(document).ready(function() {
                 { data: 'checkbox', orderable: false },
                 { data: 'name' },
                 { data: 'email' },
+                { data: 'promo_code' },
                 { data: 'action', orderable: false }
             ],
-            columnDefs: [{ className: 'dt-center', targets: [0, 1, 2, 3] }],
+            columnDefs: [{ className: 'dt-center', targets: [0, 1, 2, 3, 4] }],
             dom: 'lrtip',
             order: [[1, 'asc']],
             length: 10,
@@ -134,6 +137,45 @@ $(document).ready(function() {
 
     $('#checkAll').on('change', function() {
         $('.check-item').prop('checked', this.checked);
+    });
+
+    var promoCodesDetailTable = null;
+    $(document).on('click', '.btn-view-promo-codes', function(e) {
+        e.preventDefault();
+        var userId = $(this).data('user-id');
+        var userName = $(this).data('user-name');
+        var url = "{{ url('setting-affiliator') }}/" + userId + "/promo-codes";
+        $('#modalPromoCodesDetailTitle').text('Promo Code - ' + userName);
+        if (promoCodesDetailTable && $.fn.DataTable.isDataTable('#tablePromoCodesDetail')) {
+            promoCodesDetailTable.destroy();
+            promoCodesDetailTable = null;
+        }
+        $('#modalPromoCodesDetailBody').html('<div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm" role="status"></span> Memuat...</div>');
+        $('#modalPromoCodesDetail').modal('show');
+        $.get(url, function(res) {
+            if (res.success && res.data && res.data.length > 0) {
+                var html = '<div class="table-responsive"><table id="tablePromoCodesDetail" class="table table-hover table-striped mb-0 w-100"><thead><tr><th class="text-left">Kode</th><th class="text-center">Nama</th><th class="text-center">Status</th></tr></thead><tbody></tbody></table></div>';
+                $('#modalPromoCodesDetailBody').html(html);
+                promoCodesDetailTable = $('#tablePromoCodesDetail').DataTable({
+                    data: res.data,
+                    columns: [
+                        { data: 'code', className: 'text-left align-middle', render: function(d) { return '<a href="#" class="text-uppercase font-weight-bold" style="letter-spacing:0.5px">' + (d || '-') + '</a>'; }},
+                        { data: 'name', className: 'text-center align-middle', orderable: false, defaultContent: '-', render: function(d) { return d || '-'; }},
+                        { data: 'is_active', className: 'text-center align-middle', orderable: false, render: function(d) { return d ? '<span class="badge badge-success">Aktif</span>' : '<span class="badge badge-secondary">Nonaktif</span>'; }}
+                    ],
+                    paging: false,
+                    searching: false,
+                    ordering: true,
+                    order: [[0, 'asc']],
+                    info: false,
+                    dom: 't'
+                });
+            } else {
+                $('#modalPromoCodesDetailBody').html('<div class="p-4 text-center text-muted">Tidak ada promo code.</div>');
+            }
+        }).fail(function() {
+            $('#modalPromoCodesDetailBody').html('<div class="p-4 text-center text-danger">Gagal memuat data.</div>');
+        });
     });
 });
 </script>

@@ -25,4 +25,22 @@ class PromoCodeUsage extends Model
     {
         return $this->belongsTo(PromoCode::class);
     }
+
+    /** Invoice (untuk usage B/P). */
+    public function invoice()
+    {
+        return $this->belongsTo(\Modules\Invoices\App\Models\Invoice::class, 'invoice_id', 'id');
+    }
+
+    /** Contact saat registrasi (usage R) — contact_id → contacts.id. */
+    public function registerContact()
+    {
+        return $this->belongsTo(\App\Models\Contact::class, 'contact_id', 'id');
+    }
+
+    /** Contact/customer saat checkout (usage B/P) — customer_id → contacts.id. */
+    public function customerContact()
+    {
+        return $this->belongsTo(\App\Models\Contact::class, 'customer_id', 'id');
+    }
 }
