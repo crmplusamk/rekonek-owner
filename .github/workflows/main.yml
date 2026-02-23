@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - master
+      - staging
 
 jobs:
-  deploy:
+  deploy-production:
     runs-on: ubuntu-latest
-
+    if: github.ref == 'refs/heads/master'
+    
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -19,10 +21,34 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
       - name: Deploy
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             cd ${{ secrets.PROJECT_PATH }}
             git pull origin master
+            sh deploy.sh
+          EOF
+
+  deploy-staging:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SERVER_HOST_STG }} >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST_STG }} << 'EOF'
+            cd ${{ secrets.PROJECT_PATH }}
+            git pull origin staging
             sh deploy.sh
           EOF
