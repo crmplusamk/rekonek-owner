@@ -39,10 +39,10 @@
                         <div class="col-12 form-group">
                             <label for="code" class="font-weight-bold">Kode Promo <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text bg-light text-muted"><i class="mdi mdi-ticket-percent"></i></span>
-                                </div>
                                 <input type="text" class="form-control text-uppercase font-weight-bold @error('code') is-invalid @enderror" name="code" id="code" value="{{ old('code') }}" placeholder="CONTOH: PROMO2024" required maxlength="50" style="letter-spacing: 1px;">
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-outline-secondary" id="btnGenerateCode" title="Generate kode unik (huruf besar, angka, max 50 karakter)">Generate</button>
+                                </div>
                             </div>
                             @error('code')<small class="text-danger mt-1 d-block">{{ $message }}</small>@enderror
                             <small class="form-text text-muted">Kode unik yang akan dimasukkan pengguna (Otomatis kapital).</small>
@@ -270,6 +270,21 @@
 <script>
 $(document).ready(function() {
     $('#code').on('input', function() { $(this).val($(this).val().toUpperCase()); });
+
+    /**
+     * Generate kode promo: huruf besar + angka, prefix PROMO + 6 karakter acak, max 50 karakter.
+     */
+    function generatePromoCode() {
+        var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        var len = 6;
+        var part = '';
+        for (var i = 0; i < len; i++) {
+            part += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        var code = 'PROMO' + part;
+        $('#code').val(code).trigger('input');
+    }
+    $('#btnGenerateCode').on('click', generatePromoCode);
 
     function toggleAffiliatorBlock() {
         var isAffiliator = ($('#type').val() === 'affiliator');

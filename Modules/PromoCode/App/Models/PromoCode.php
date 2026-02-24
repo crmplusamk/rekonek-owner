@@ -115,24 +115,22 @@ class PromoCode extends Model
 
     /**
      * Get discount config for checkout context.
-     * is_subscriber false (belum pernah langganan) → registrasi.
-     * is_subscriber true (sudah pernah langganan) → perpanjangan.
-     *
+     * is_perpanjangan false → registrasi (pembelian baru). is_perpanjangan true → perpanjangan.
      */
-    public function getDiscountForContext(bool $useRegistrasi): array
+    public function getDiscountForContext(bool $isPerpanjangan): array
     {
-        if ($useRegistrasi) {
-            $type = $this->discount_type_registrasi ?? 'percentage';
-            $percentage = $this->discount_percentage_registrasi;
-            $amount = $this->discount_amount_registrasi;
-            $minPurchase = $this->min_purchase_registrasi;
-            $maxDiscount = $this->max_discount_registrasi;
-        } else {
+        if ($isPerpanjangan) {
             $type = $this->discount_type_perpanjangan ?? 'percentage';
             $percentage = $this->discount_percentage_perpanjangan;
             $amount = $this->discount_amount_perpanjangan;
             $minPurchase = $this->min_purchase_perpanjangan;
             $maxDiscount = $this->max_discount_perpanjangan;
+        } else {
+            $type = $this->discount_type_registrasi ?? 'percentage';
+            $percentage = $this->discount_percentage_registrasi;
+            $amount = $this->discount_amount_registrasi;
+            $minPurchase = $this->min_purchase_registrasi;
+            $maxDiscount = $this->max_discount_registrasi;
         }
 
         return [
@@ -145,15 +143,15 @@ class PromoCode extends Model
     }
 
     /**
-     * Calculate discount amount for checkout context (registrasi or perpanjangan).
+     * Calculate discount amount for checkout context. false = registrasi, true = perpanjangan.
      */
-    public function calculateDiscountForContext(float $amount, bool $useRegistrasi): float
+    public function calculateDiscountForContext(float $amount, bool $isPerpanjangan): float
     {
         if (! $this->isAvailable()) {
             return 0;
         }
 
-        $config = $this->getDiscountForContext($useRegistrasi);
+        $config = $this->getDiscountForContext($isPerpanjangan);
         $minPurchase = $config['min_purchase'];
         if ($minPurchase !== null && (float) $minPurchase > 0 && $amount < (float) $minPurchase) {
             return 0;

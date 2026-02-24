@@ -75,9 +75,8 @@ class CheckoutApiController extends Controller
             if ($request->filled('promo_code')) {
                 $promoCodeModel = PromoCode::where('code', $request->promo_code)->first();
                 if ($promoCodeModel && $promoCodeModel->isAvailable() && $promoCodeModel->canBeUsedBy($customer->id, $request->company_id)) {
-                    $isRenew = $request->whenFilled('is_renew', fn () => $request->boolean('is_renew'), fn () => $request->boolean('is_subscriber'));
-                    $useRegistrasi = $isRenew === false;
-                    $promoDiscount = $promoCodeModel->calculateDiscountForContext((float) $subtotal, $useRegistrasi);
+                    $isPerpanjangan = $request->boolean('is_renew');
+                    $promoDiscount = $promoCodeModel->calculateDiscountForContext((float) $subtotal, $isPerpanjangan);
                     if ($promoDiscount > 0) {
                         $appliedPromoCode = $promoCodeModel;
                     }
@@ -121,7 +120,7 @@ class CheckoutApiController extends Controller
             ];
             if ($appliedPromoCode) {
                 $invoicePayload['promo_code_id'] = $appliedPromoCode->id;
-                $invoicePayload['promo_usage_status'] = ($request->whenFilled('is_renew', fn () => $request->boolean('is_renew'), fn () => $request->boolean('is_subscriber'))) ? 'P' : 'B'; // P = perpanjangan, B = register/baru
+                $invoicePayload['promo_usage_status'] = $request->boolean('is_renew') ? 'P' : 'B'; // P = perpanjangan, B = register/baru
             }
             $invoice = $this->invoiceRepo->create($invoicePayload);
 
@@ -217,9 +216,8 @@ class CheckoutApiController extends Controller
             if ($request->filled('promo_code')) {
                 $promoCodeModel = PromoCode::where('code', $request->promo_code)->first();
                 if ($promoCodeModel && $promoCodeModel->isAvailable() && $promoCodeModel->canBeUsedBy($customer->id, $request->company_id)) {
-                    $isRenew = $request->whenFilled('is_renew', fn () => $request->boolean('is_renew'), fn () => $request->boolean('is_subscriber'));
-                    $useRegistrasi = $isRenew === false;
-                    $promoDiscount = $promoCodeModel->calculateDiscountForContext((float) $subtotal, $useRegistrasi);
+                    $isPerpanjangan = $request->boolean('is_renew');
+                    $promoDiscount = $promoCodeModel->calculateDiscountForContext((float) $subtotal, $isPerpanjangan);
                     if ($promoDiscount > 0) {
                         $appliedPromoCode = $promoCodeModel;
                     }
@@ -263,7 +261,7 @@ class CheckoutApiController extends Controller
             ];
             if ($appliedPromoCode) {
                 $invoicePayload['promo_code_id'] = $appliedPromoCode->id;
-                $invoicePayload['promo_usage_status'] = ($request->whenFilled('is_renew', fn () => $request->boolean('is_renew'), fn () => $request->boolean('is_subscriber'))) ? 'P' : 'B';
+                $invoicePayload['promo_usage_status'] = $request->boolean('is_renew') ? 'P' : 'B';
             }
             $invoice = $this->invoiceRepo->create($invoicePayload);
 

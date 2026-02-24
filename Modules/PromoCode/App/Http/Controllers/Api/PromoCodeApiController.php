@@ -57,9 +57,9 @@ class PromoCodeApiController extends Controller
             ], 400);
         }
 
-        $isRenew = $request->whenFilled('is_renew', fn () => $request->boolean('is_renew'), fn () => false);
-        $useRegistrasi = $isRenew === false;
-        $config = $promoCode->getDiscountForContext($useRegistrasi);
+        // is_renew false = registrasi (else). is_renew true = perpanjangan (if). Langsung pass bool ke model.
+        $isPerpanjangan = $request->filled('is_renew') ? $request->boolean('is_renew') : false;
+        $config = $promoCode->getDiscountForContext($isPerpanjangan);
 
         $discount = null;
         if ($request->amount !== null && $request->amount > 0) {
@@ -70,7 +70,7 @@ class PromoCodeApiController extends Controller
                     'message' => 'Minimal pembelian untuk promo code ini adalah '.number_format((float) $minPurchase, 0, ',', '.'),
                 ], 400);
             }
-            $discount = $promoCode->calculateDiscountForContext((float) $request->amount, $useRegistrasi);
+            $discount = $promoCode->calculateDiscountForContext((float) $request->amount, $isPerpanjangan);
         }
 
         return response()->json([

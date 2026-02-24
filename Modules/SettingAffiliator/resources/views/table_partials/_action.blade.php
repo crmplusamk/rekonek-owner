@@ -3,13 +3,13 @@
 </a>
 <div class="dropdown-menu dropdown-menu-right">
     <a class="dropdown-item btn-config-affiliator pointer" href="javascript:void(0)" data-id="{{ $user->id }}" data-name="{{ $user->name }}">
-        <i class="mdi mdi-settings"></i> Konfigurasi Komisi
+        <i class="mdi mdi-settings"></i> Komisi
+    </a>
+    <a class="dropdown-item pointer" href="{{ route('setting-affiliator.detail', $user->id) }}">
+        <i class="mdi mdi-eye"></i> Detail
     </a>
     <a class="dropdown-item btn-edit-affiliator pointer" href="javascript:void(0)" data-id="{{ $user->id }}" data-name="{{ $user->name }}" data-email="{{ $user->email }}">
         <i class="mdi mdi-pencil"></i> Edit
-    </a>
-    <a class="dropdown-item pointer" href="{{ route('setting-affiliator.detail', $user->id) }}">
-        <i class="mdi mdi-chart-line"></i> Detail Reporting
     </a>
     <a class="dropdown-item pointer" data-toggle="modal" data-target="#destroy-{{ $user->id }}">
         <i class="mdi mdi-delete"></i> Hapus
