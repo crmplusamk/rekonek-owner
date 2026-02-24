@@ -231,4 +231,17 @@ trait AccessLogFollowupTrait
 
         return $processedCount;
     }
+
+    /**
+     * Mark that followup was sent for this customer/stage (dipanggil dari BaseFollowupJob).
+     * Pencatatan per-access_log sudah dilakukan di processStuckCustomers via followup_sent.
+     */
+    protected function markFollowupSent(object $payload, string $currentStage): void
+    {
+        Log::info('Followup sent', [
+            'stage' => $currentStage,
+            'company_id' => $payload->company_id ?? null,
+            'email' => $payload->email ?? null,
+        ]);
+    }
 }

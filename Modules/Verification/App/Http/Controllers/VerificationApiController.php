@@ -44,7 +44,7 @@ class VerificationApiController extends Controller
             RegistrationToken::create([
                 'email' => $request->email,
                 'sender' => $session->number,
-                'receiver' => $request->number,
+                'receiver' => $this->normalizePhoneNumber($request->number),
                 'token' => $token,
                 'status' => false,
             ]);
@@ -78,7 +78,53 @@ class VerificationApiController extends Controller
 
     public function generateOtpToken($length)
     {
-        return str_pad(random_int(0, pow(10, $length) - 1), $length, '0', STR_PAD_LEFT);
+        return str_pad((string) random_int(0, (int) pow(10, $length) - 1), $length, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Normalize nomor untuk query (digit saja, konsisten saat simpan & verify).
+     * Format Indonesia: 08xxx → 628xxx agar sama dengan format WhatsApp.
+     */
+    private function normalizePhoneNumber($value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+        $digits = preg_replace('/\D/', '', (string) $value);
+        if ($digits === '') {
+            return (string) $value;
+        }
+        if (strlen($digits) >= 10 && str_starts_with($digits, '0')) {
+            $digits = '62'.substr($digits, 1);
+        }
+
+        return $digits;
+    }
+
+    /**
+     * Normalize kode token dari input: trim, ambil digit saja, pad 4 karakter (leading zero).
+     */
+    private function normalizeTokenCode($value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+        $digits = preg_replace('/\D/', '', (string) trim((string) $value));
+
+        return str_pad($digits, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Bandingkan token tersimpan dengan kode input (keduanya dinormalisasi).
+     */
+    private function tokenMatches(?string $storedToken, string $normalizedCode): bool
+    {
+        if ($storedToken === null || $storedToken === '') {
+            return false;
+        }
+        $stored = $this->normalizeTokenCode($storedToken);
+
+        return $stored === $normalizedCode;
     }
 
     public function tokenVerify(Request $request)
@@ -86,14 +132,17 @@ class VerificationApiController extends Controller
         $check = null;
 
         try {
+            $receiver = $this->normalizePhoneNumber($request->number);
+            $code = $this->normalizeTokenCode($request->code);
+
             $check = RegistrationToken::where([
-                'receiver' => $request->number,
+                'receiver' => $receiver,
                 'status' => false,
             ])
                 ->orderBy('created_at', 'desc')
                 ->first();
 
-            if (! $check || $check->token != $request->code) {
+            if (! $check || $this->tokenMatches($check->token, $code) === false) {
                 $this->accessLogService->create([
                     'number' => $request->number,
                     'progress' => 'token_verification_failed',
