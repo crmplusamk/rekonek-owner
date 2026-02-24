@@ -27,6 +27,9 @@ class RouteServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
 
         $this->routes(function () {
+            // Health check endpoint - no middleware for fastest response
+            Route::get('/health', [\App\Http\Controllers\Api\HealthController::class, 'check']);
+
             Route::middleware('api')
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
