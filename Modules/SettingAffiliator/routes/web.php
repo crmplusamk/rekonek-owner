@@ -25,8 +25,14 @@ Route::middleware(['auth'])->group(function () {
         ->name('setting-affiliator.update');
     Route::delete('setting-affiliator/{id}', [SettingAffiliatorController::class, 'destroy'])
         ->name('setting-affiliator.destroy');
+    Route::get('setting-affiliator/{id}/detail', [SettingAffiliatorController::class, 'detail'])
+        ->name('setting-affiliator.detail');
+    Route::get('setting-affiliator/{id}/detail-data', [SettingAffiliatorController::class, 'detailData'])
+        ->name('setting-affiliator.detail-data');
     Route::get('setting-affiliator/{id}/config', [SettingAffiliatorController::class, 'getConfig'])
         ->name('setting-affiliator.config');
     Route::put('setting-affiliator/{id}/config', [SettingAffiliatorController::class, 'saveConfig'])
         ->name('setting-affiliator.config.update');
+    Route::get('setting-affiliator/{id}/promo-codes', [SettingAffiliatorController::class, 'getPromoCodes'])
+        ->name('setting-affiliator.promo-codes');
 });

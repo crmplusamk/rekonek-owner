@@ -6,13 +6,15 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Modules\PromoCode\App\Models\PromoCode;
 use Modules\PromoCode\App\Models\PromoCodeUsage;
 
 class PromoCodeApiController extends Controller
 {
     /**
-     * Check promo code availability and validate
+     * Check promo code availability and validate.
+     * Konteks: is_renew false = registrasi/baru, true = perpanjangan.
      */
     public function check(Request $request): JsonResponse
     {
@@ -21,6 +23,7 @@ class PromoCodeApiController extends Controller
             'amount' => 'nullable|numeric|min:0',
             'customer_id' => 'nullable|uuid',
             'company_id' => 'nullable|uuid',
+            'is_renew' => ['nullable', Rule::in(['true', 'false', '1', '0', true, false, 1, 0])],
         ]);
 
         if ($validator->fails()) {
@@ -54,15 +57,20 @@ class PromoCodeApiController extends Controller
             ], 400);
         }
 
+        $isRenew = $request->whenFilled('is_renew', fn () => $request->boolean('is_renew'), fn () => false);
+        $useRegistrasi = $isRenew === false;
+        $config = $promoCode->getDiscountForContext($useRegistrasi);
+
         $discount = null;
-        if ($request->amount !== null) {
-            if ($promoCode->min_purchase && $request->amount < $promoCode->min_purchase) {
+        if ($request->amount !== null && $request->amount > 0) {
+            $minPurchase = $config['min_purchase'];
+            if ($minPurchase !== null && (float) $minPurchase > 0 && $request->amount < (float) $minPurchase) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Minimal pembelian untuk promo code ini adalah '.number_format($promoCode->min_purchase, 0, ',', '.'),
+                    'message' => 'Minimal pembelian untuk promo code ini adalah '.number_format((float) $minPurchase, 0, ',', '.'),
                 ], 400);
             }
-            $discount = $promoCode->calculateDiscount($request->amount);
+            $discount = $promoCode->calculateDiscountForContext((float) $request->amount, $useRegistrasi);
         }
 
         return response()->json([
@@ -71,11 +79,11 @@ class PromoCodeApiController extends Controller
             'data' => [
                 'code' => $promoCode->code,
                 'name' => $promoCode->name,
-                'discount_type' => $promoCode->discount_type,
-                'discount_percentage' => $promoCode->discount_percentage,
-                'discount_amount' => $promoCode->discount_amount,
-                'min_purchase' => $promoCode->min_purchase,
-                'max_discount' => $promoCode->max_discount,
+                'discount_type' => $config['discount_type'],
+                'discount_percentage' => $config['discount_percentage'],
+                'discount_amount' => $config['discount_amount'],
+                'min_purchase' => $config['min_purchase'],
+                'max_discount' => $config['max_discount'],
                 'discount' => $discount,
                 'description' => $promoCode->description,
             ],
@@ -177,6 +185,7 @@ class PromoCodeApiController extends Controller
             'purchase_amount' => 'nullable|numeric|min:0',
             'discount_amount' => 'nullable|numeric|min:0',
             'metadata' => 'nullable|array',
+            'is_ref' => 'nullable|in:true,false,1,0',
         ]);
 
         if ($validator->fails()) {
@@ -215,6 +224,7 @@ class PromoCodeApiController extends Controller
             $discountAmount = $promoCode->calculateDiscount($request->purchase_amount);
         }
 
+        $status = $request->boolean('is_ref') ? 'R' : null; // R = promo dari register (is_ref true)
         $usage = PromoCodeUsage::create([
             'promo_code_id' => $promoCode->id,
             'customer_id' => $request->customer_id,
@@ -223,6 +233,8 @@ class PromoCodeApiController extends Controller
             'purchase_amount' => $request->purchase_amount,
             'discount_amount' => $discountAmount,
             'metadata' => $request->metadata,
+            'is_ref' => $request->boolean('is_ref'),
+            'status' => $status,
         ]);
 
         $promoCode->increment('used_count');

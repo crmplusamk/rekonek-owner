@@ -71,6 +71,7 @@ class ContactApiController extends Controller
                             'email' => $customer->email,
                         ],
                         'is_ref' => true, // Mark as referral/promo from registration
+                        'status' => 'R', // R = promo dari register (is_ref true)
                     ]);
 
                     // Increment promo code usage count

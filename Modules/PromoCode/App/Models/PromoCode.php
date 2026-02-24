@@ -112,4 +112,65 @@ class PromoCode extends Model
 
         return true;
     }
+
+    /**
+     * Get discount config for checkout context.
+     * is_subscriber false (belum pernah langganan) → registrasi.
+     * is_subscriber true (sudah pernah langganan) → perpanjangan.
+     *
+     */
+    public function getDiscountForContext(bool $useRegistrasi): array
+    {
+        if ($useRegistrasi) {
+            $type = $this->discount_type_registrasi ?? 'percentage';
+            $percentage = $this->discount_percentage_registrasi;
+            $amount = $this->discount_amount_registrasi;
+            $minPurchase = $this->min_purchase_registrasi;
+            $maxDiscount = $this->max_discount_registrasi;
+        } else {
+            $type = $this->discount_type_perpanjangan ?? 'percentage';
+            $percentage = $this->discount_percentage_perpanjangan;
+            $amount = $this->discount_amount_perpanjangan;
+            $minPurchase = $this->min_purchase_perpanjangan;
+            $maxDiscount = $this->max_discount_perpanjangan;
+        }
+
+        return [
+            'discount_type' => $type,
+            'discount_percentage' => $percentage,
+            'discount_amount' => $amount,
+            'min_purchase' => $minPurchase,
+            'max_discount' => $maxDiscount,
+        ];
+    }
+
+    /**
+     * Calculate discount amount for checkout context (registrasi or perpanjangan).
+     */
+    public function calculateDiscountForContext(float $amount, bool $useRegistrasi): float
+    {
+        if (! $this->isAvailable()) {
+            return 0;
+        }
+
+        $config = $this->getDiscountForContext($useRegistrasi);
+        $minPurchase = $config['min_purchase'];
+        if ($minPurchase !== null && (float) $minPurchase > 0 && $amount < (float) $minPurchase) {
+            return 0;
+        }
+
+        $discount = 0;
+        if (($config['discount_type'] ?? 'percentage') === 'percentage') {
+            $pct = (float) ($config['discount_percentage'] ?? 0);
+            $discount = ($amount * $pct) / 100;
+            $maxDiscount = $config['max_discount'];
+            if ($maxDiscount !== null && $discount > (float) $maxDiscount) {
+                $discount = (float) $maxDiscount;
+            }
+        } else {
+            $discount = (float) ($config['discount_amount'] ?? 0);
+        }
+
+        return min($discount, $amount);
+    }
 }

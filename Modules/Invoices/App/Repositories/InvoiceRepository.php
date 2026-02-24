@@ -37,6 +37,8 @@ class InvoiceRepository
             'payment_method' => $request['payment_method'],
             'payment_total' => $request['payment_total'],
             'company_id' => $request['company_id'],
+            'promo_code_id' => $request['promo_code_id'] ?? null,
+            'promo_usage_status' => $request['promo_usage_status'] ?? null,
         ]);
 
          /**
