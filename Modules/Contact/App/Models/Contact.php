@@ -16,4 +16,9 @@ class Contact extends Model
      * The attributes that are mass assignable.
      */
     protected $guarded = [];
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'sales_registration_followup_sent_at' => 'datetime',
+    ];
 }

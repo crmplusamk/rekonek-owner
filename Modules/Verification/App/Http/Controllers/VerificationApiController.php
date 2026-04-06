@@ -142,23 +142,8 @@ class VerificationApiController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->first();
 
-            if (! $check || $this->tokenMatches($check->token, $code) === false) {
-                $this->accessLogService->create([
-                    'number' => $request->number,
-                    'progress' => 'token_verification_failed',
-                    'category' => 'verification',
-                    'email' => $check->email ?? null,
-                    'method' => $request->method(),
-                    'endpoint' => $request->path(),
-                    'status_code' => 404,
-                    'request_data' => [
-                        'number' => $request->number,
-                        'code' => $request->code,
-                    ],
-                    'action' => 'verify_token',
-                    'activity_type' => 'token_verification',
-                ]);
-
+            if (! $check || $this->tokenMatches($check->token, $code) === false) 
+            {
                 return response()->json(['success' => true, 'message' => 'Not Found'], 404);
             }
 
@@ -185,21 +170,6 @@ class VerificationApiController extends Controller
             return response()->json(['success' => true, 'message' => 'ok'], 200);
 
         } catch (\Exception $e) {
-            $this->accessLogService->create([
-                'number' => $request->number ?? null,
-                'progress' => 'token_verification_error',
-                'category' => 'verification',
-                'email' => $check->email ?? null,
-                'method' => $request->method(),
-                'endpoint' => $request->path(),
-                'status_code' => 500,
-                'request_data' => [
-                    'number' => $request->number ?? null,
-                    'code' => $request->code ?? null,
-                ],
-                'action' => 'verify_token',
-                'activity_type' => 'token_verification',
-            ]);
 
             return response()->json([
                 'error' => true,

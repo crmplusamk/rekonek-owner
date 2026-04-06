@@ -2,7 +2,6 @@
 
 namespace Modules\Contact\App\Http\Controllers;
 
-use App\Helpers\Whatsapp\WhatsappHelper;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,9 +11,11 @@ use Modules\Package\App\Models\Package;
 use Modules\Package\App\Repositories\PackageRepository;
 use Modules\Payment\App\Repositories\PaymentRepository;
 use Modules\Subscription\App\Repositories\SubscriptionRepository;
-use Modules\WhatsappOtp\App\Models\WhatsappOtpSession;
 use Modules\PromoCode\App\Models\PromoCode;
 use Modules\PromoCode\App\Models\PromoCodeUsage;
+use App\Jobs\SalesRegistrationFollowupJob;
+use App\Jobs\SendRegistrationGreetingJob;
+use App\Jobs\SendSalesRegistrationNotificationJob;
 use App\Services\AccessLogService;
 
 class ContactApiController extends Controller
@@ -155,13 +156,14 @@ class ContactApiController extends Controller
             /** get package */
             $package = $this->packageRepo->getByName('Free');
 
-            /** create subs */
+            /** create subs: Free trial 14 hari (inklusif tanggal mulai) */
+            $subscriptionStartedAt = now();
             $subs = $this->subsRepo->create([
                 'package_id' => $package->id,
                 'customer_id' => $customer->id,
                 'is_active' => true,
-                'started_at' => now(),
-                'expired_at' => now()->addDays(14),
+                'started_at' => $subscriptionStartedAt,
+                'expired_at' => $subscriptionStartedAt->copy()->addDays(13)->endOfDay(),
                 'company_id' => $customer->company_id,
             ]);
 
@@ -214,8 +216,9 @@ class ContactApiController extends Controller
 
             DB::commit();
 
-            // Send greeting message to customer after successful email verification
-            $this->sendGreetingMessage($customer->phone, $customer->name ?? 'Customer');
+            SendRegistrationGreetingJob::dispatch($customer->phone, $customer->name ?? 'Customer');
+            SendSalesRegistrationNotificationJob::dispatch($customer->id);
+            // SalesRegistrationFollowupJob::dispatch($customer->id)->delay(now()->addHours(24));
 
             return response()->json([
                 'success' => true,
@@ -231,47 +234,6 @@ class ContactApiController extends Controller
                 'error' => true,
                 'message' => $e->getMessage(),
             ], 500);
-        }
-    }
-
-    /**
-     * Send greeting message to customer after successful email verification
-     */
-    private function sendGreetingMessage($phone, $customerName)
-    {
-        try {
-
-            $session = WhatsappOtpSession::where('status', true)->orderBy('created_at', 'asc')->first();
-
-            if (! $session) {
-                return false;
-            }
-
-            $message = "Halo Kak *{$customerName}*! 👋\n\n".
-                       "Terima kasih sudah memilih Rekonek untuk jadi pusat komando bisnis Anda. Akun Anda sudah siap!\n\n".
-                       "Agar tidak bingung, yuk tonton video panduan setup 2 menit ini:\n".
-                       "https://www.youtube.com/watch?v=u063lZ-zDGQ\n\n".
-                       "*Langkah pertama Anda:*\n\n".
-                       "1. Login ke Dashboard:\n".
-                       "https://app.rekonek.com/login\n\n".
-                       "2. Hubungkan WhatsApp (Scan QR)\n\n".
-                       "3. Atur akses tim Anda.\n\n".
-                       "Selamat tinggal blindspot 🚀\n\n".
-                       '_Ini adalah pesan otomatis dari Rekonek_';
-
-            $response = WhatsappHelper::sendTextMessage(
-                $session->session,
-                $phone,
-                $message
-            );
-
-            return $response;
-
-        } catch (\Exception $e) {
-
-            \Log::error('Failed to send greeting message: '.$e->getMessage());
-
-            return false;
         }
     }
 

@@ -45,9 +45,10 @@ class ContactRepository
         ->first();
 
         $contact->update([
-            "verification_code" => null,
-            "is_active" => true,
-            "is_customer" => true
+            'verification_code' => null,
+            'is_active' => true,
+            'is_customer' => true,
+            'email_verified_at' => now(),
         ]);
 
         return $contact;

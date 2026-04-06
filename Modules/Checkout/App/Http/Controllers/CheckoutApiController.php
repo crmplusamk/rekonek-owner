@@ -20,6 +20,7 @@ use Modules\Payment\App\Repositories\PaymentRepository;
 use Modules\Subscription\App\Models\SubscriptionAddon;
 use Modules\Subscription\App\Models\SubscriptionPackage;
 use Modules\Subscription\App\Services\SubscriptionService;
+use App\Jobs\SendThankYouSubscribedMailJob;
 
 class CheckoutApiController extends Controller
 {
@@ -453,6 +454,7 @@ class CheckoutApiController extends Controller
     {
         DB::beginTransaction();
         try {
+            $mailPayload = null;
 
             $validate = $this->midtransSrv->validateSignature([
                 "order_id" => $request->order_id,
@@ -473,7 +475,7 @@ class CheckoutApiController extends Controller
 
             } else if($status == 'capture' || $status == 'settlement') {
                 /** done payment */
-                $this->paymentSettlement($invoice, $request);
+                $mailPayload = $this->paymentSettlement($invoice, $request);
 
             } else if ($status == 'cancel' || $status == 'deny' || $status == 'expire') {
                 /** error payment */
@@ -482,6 +484,14 @@ class CheckoutApiController extends Controller
             };
 
             DB::commit();
+
+            if (! empty($mailPayload) && is_array($mailPayload)) {
+                SendThankYouSubscribedMailJob::dispatch(
+                    $mailPayload['company_id'],
+                    $mailPayload['invoice_code'],
+                    $mailPayload['payment_date_label'],
+                )->onQueue('emails');
+            }
 
         } catch (\Throwable $th) {
 
@@ -496,6 +506,10 @@ class CheckoutApiController extends Controller
      */
     private function markAsPaidAndActivateSubscription($invoice)
     {
+        $paymentDateLabel = Carbon::now()
+            ->locale('id')
+            ->translatedFormat('d F Y, H:i');
+
         $this->invoiceRepo->update($invoice, [
             'is_paid' => 1,
             'is_status' => 2,
@@ -578,6 +592,12 @@ class CheckoutApiController extends Controller
 
         $this->recordPromoUsageForInvoice($invoice);
         $this->markCompanyRenewOnClient($invoice->company_id);
+
+        return [
+            'company_id' => $invoice->company_id,
+            'invoice_code' => $invoice->code ?? '',
+            'payment_date_label' => $paymentDateLabel,
+        ];
     }
 
     /**
@@ -651,13 +671,24 @@ class CheckoutApiController extends Controller
         ]);
     }
 
-    private function paymentSettlement($invoice, $request)
+    private function paymentSettlement($invoice, $request): ?array
     {
+        if (! $invoice) {
+            return null;
+        }
+
         /** get client contact data */
         $client = DB::table('contacts')->where("company_id", $invoice->company_id)->first();
 
+        if (! $client) {
+            return null;
+        }
+
         /** payment date */
         $paymentDate = $request->settlement_time ?? now();
+        $paymentDateLabel = Carbon::parse($paymentDate)
+            ->locale('id')
+            ->translatedFormat('d F Y, H:i');
 
         /** update invoice status */
         $this->invoiceRepo->update($invoice, [
@@ -767,6 +798,12 @@ class CheckoutApiController extends Controller
 
         $this->recordPromoUsageForInvoice($invoice);
         $this->markCompanyRenewOnClient($invoice->company_id);
+
+        return [
+            'company_id' => $invoice->company_id,
+            'invoice_code' => $invoice->code ?? '',
+            'payment_date_label' => $paymentDateLabel,
+        ];
     }
 
     private function paymentError($request, $status)

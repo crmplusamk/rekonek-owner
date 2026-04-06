@@ -13,9 +13,13 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('inspire')->hourly();
+        // $schedule->command('app:send-free-package-reminder')->dailyAt('08:00');
+        // $schedule->command('app:send-subscriber-expiry-reminder')->dailyAt('08:10');
+        // $schedule->command('app:send-expired-subscription-notification')->dailyAt('04:00');
 
-        // Reminder WA: trial_activated ≥30 menit tapi belum whatsapp_connected (sekali saja per customer)
-        // $schedule->command('reminder:incomplete-setup')->everyFifteenMinutes();
+        $schedule->command('app:send-free-package-reminder')->everyMinute();
+        $schedule->command('app:send-subscriber-expiry-reminder')->everyMinute();
+        $schedule->command('app:send-expired-subscription-notification')->everyMinute();
     }
 
     /**
