@@ -38,7 +38,7 @@ class VerificationApiController extends Controller
             /**
              * Response status
              */
-            if ($response == false) {
+            if ($response['error'] == true) {
                 return response()->json(['error' => true, 'message' => 'Terjadi kesalahan', 'data' => $response], 500);
             }
 

@@ -74,9 +74,15 @@ class WhatsappHelper
         $data = $response->json();
 
         if ($data['status'] == 400 || $data['status'] == 404 || $data['status'] == 500) {
-            return $data;
+            return [
+                'error' => true,
+                'data' => $data
+            ];
         }
 
-        return $data;
+        return [
+            'error' => false,
+            'data' => $data
+        ];
     }
 }
