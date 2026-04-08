@@ -17,7 +17,12 @@ class SendSalesRegistrationNotificationJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private const SALES_NOTIFICATION_PHONE = '6282121938547';
+    private function salesNotificationPhone(): string
+    {
+        $v = trim((string) env('SALES_PHONE', ''));
+
+        return $v !== '' ? $v : '6285150741783';
+    }
 
     public function __construct(
         public string $contactId
@@ -66,7 +71,7 @@ class SendSalesRegistrationNotificationJob implements ShouldQueue
 
             $result = WhatsappHelper::sendTextMessage(
                 $session->session,
-                self::SALES_NOTIFICATION_PHONE,
+                $this->salesNotificationPhone(),
                 $message
             );
 

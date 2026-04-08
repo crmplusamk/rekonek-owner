@@ -10,13 +10,15 @@ class ContactRepository
 
     public function create($request)
     {
+        $email = Str::lower(trim((string) ($request['email'] ?? '')));
+
         $data = Contact::create([
             'company_id' => $request['company_id'],
             'name' => $request['name'],
             'code' => Str::upper(Str::random(5)),
             'phone' => $request['phone'],
-            'email' => $request['email'],
-            'login_email' => $request['email'],
+            'email' => $email,
+            'login_email' => $email,
             'login_password' => $request['login_password'],
             'is_active' => $request['is_active'] ?? false,
             'is_customer' => $request['is_customer'] ?? false,
@@ -56,7 +58,7 @@ class ContactRepository
 
     public function activate($request)
     {
-        $email = $request['email'];
+        $email = Str::lower(trim((string) ($request['email'] ?? '')));
         $data = Contact::where([
             'email' => $email,
             'company_id' => $request['company_id'],

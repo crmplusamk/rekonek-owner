@@ -11,7 +11,7 @@
         <tbody>
             <tr>
                 <td align="center" valign="center" style="text-align:center; padding: 40px">
-                    <a href="{{ config('app.url') }}" class="logo">
+                    <a href="{{ env('CRM_CLIENT_HOST') }}" class="logo">
                         <img src="{{ URL::to('assets/images/logo.png') }}" style="width: 150px; height:70px" alt="logo" />
                     </a>
                 </td>
@@ -31,7 +31,7 @@
                         </div>
 
                         <div style="padding-bottom: 40px; text-align:center;">
-                            <a href="{{ config('app.url') }}"
+                            <a href="{{ env('CRM_CLIENT_HOST') }}"
                                 rel="noopener"
                                 style="text-decoration:none;display:inline-block;text-align:center;padding:0.75575rem 1.3rem;font-size:0.925rem;line-height:1.5;border-radius:0.35rem;color:#ffffff;background-color:#2465FF;border:0px;margin-right:0.75rem!important;font-weight:600!important;outline:none!important;vertical-align:middle"
                                 target="_blank">
@@ -45,10 +45,10 @@
                             <p style="margin-bottom: 10px;">
                                 Tombol tidak berfungsi? Coba copy paste link berikut pada browser Anda:
                             </p>
-                            <a href="{{ config('app.url') }}"
+                            <a href="{{ env('CRM_CLIENT_HOST') }}"
                                 rel="noopener" target="_blank"
                                 style="text-decoration:none;color: #009EF7">
-                                {{ config('app.url') }}
+                                {{ env('CRM_CLIENT_HOST') }}
                             </a>
                         </div>
 

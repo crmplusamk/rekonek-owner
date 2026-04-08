@@ -6,6 +6,7 @@ use App\Helpers\Whatsapp\WhatsappHelper;
 use App\Http\Controllers\Controller;
 use App\Services\AccessLogService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Modules\Verification\App\Models\RegistrationToken;
 use Modules\WhatsappOtp\App\Models\WhatsappOtpSession;
 
@@ -38,11 +39,11 @@ class VerificationApiController extends Controller
              * Response status
              */
             if ($response == false) {
-                return response()->json(['error' => true, 'message' => 'Terjadi kesalahan'], 500);
+                return response()->json(['error' => true, 'message' => 'Terjadi kesalahan', 'data' => $response], 500);
             }
 
             RegistrationToken::create([
-                'email' => $request->email,
+                'email' => Str::lower(trim((string) $request->input('email', ''))),
                 'sender' => $session->number,
                 'receiver' => $this->normalizePhoneNumber($request->number),
                 'token' => $token,
