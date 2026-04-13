@@ -84,6 +84,10 @@ return [
                 'log',
             ],
         ],
+        
+        'mailtrap-sdk' => [
+            'transport' => 'mailtrap-sdk'
+        ],
     ],
 
     /*
