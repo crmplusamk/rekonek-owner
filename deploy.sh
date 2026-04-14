@@ -6,6 +6,7 @@ export NVM_DIR="$HOME/.nvm"
 
 nvm use 20
 
+rm composer.lock
 composer install --no-dev --optimize-autoloader
 
 npm install
