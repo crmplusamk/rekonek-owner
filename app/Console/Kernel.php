@@ -13,9 +13,15 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('app:invoice-generate-renew')->dailyAt('00:00');
-        $schedule->command('app:send-free-package-reminder')->dailyAt('08:00');
         $schedule->command('app:send-subscriber-expiry-reminder')->dailyAt('08:10');
-        $schedule->command('app:send-expired-subscription-notification')->dailyAt('04:00');
+
+        // Grace period pipeline. Pre-expiry (H-3) + post-expiry (H+1..H+31).
+        // Staggered timings: pre-expiry → enter → drip → terminate, pagi hari,
+        // tidak berebut DB/queue antar command.
+        $schedule->command('app:send-pre-expiry-reminder')->dailyAt('05:00');
+        $schedule->command('app:enter-grace')->dailyAt('06:00');
+        $schedule->command('app:drip-grace')->dailyAt('09:00');
+        $schedule->command('app:terminate-grace')->dailyAt('11:00');
     }
 
     /**

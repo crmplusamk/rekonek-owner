@@ -73,6 +73,9 @@
                             <th class="text-center">Kode</th>
                             <th class="text-center">Phone</th>
                             <th class="text-center">Register At</th>
+                            <th class="text-center">Last Login</th>
+                            <th class="text-center">Subscription</th>
+                            <th class="text-center">Expired</th>
                             <th class="text-center">Status</th>
                             <th data-orderable="false"></th>
                         </tr>
@@ -128,6 +131,18 @@
                     data: "created_at",
                 },
                 {
+                    data: "last_login",
+                    sortable: false,
+                },
+                {
+                    data: "subscription",
+                    sortable: false,
+                },
+                {
+                    data: "subscription_period",
+                    sortable: false,
+                },
+                {
                     data: "status",
                     sortable: false,
                 },
@@ -139,7 +154,7 @@
             columnDefs: [
                 {
                     className: 'dt-center',
-                    targets: [0, 2, 3, 4, 5]
+                    targets: [0, 2, 3, 4, 5, 6, 7, 8]
                 }
             ],
             dom: 'lrtip',

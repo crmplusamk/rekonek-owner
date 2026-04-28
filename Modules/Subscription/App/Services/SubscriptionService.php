@@ -12,23 +12,20 @@ class SubscriptionService
 
     public function updatePackage($data)
     {
-        $data = SubscriptionPackage::updateOrCreate(
-            [
-                'customer_id' => $data['customer_id'],
-                'company_id' => $data['company_id'],
-            ],
-            [
-                'code' => Str::upper(Str::random(5)),
-                'customer_id' => $data['customer_id'],
-                'company_id' => $data['company_id'],
-                'package_id' => $data['package_id'],
-                'termin_duration' => $data['termin_duration'],
-                'termin' => $data['termin'],
-                'started_at' => $data['started_at'],
-                'expired_at' => $data['expired_at'],
-                'is_active' => true,
-            ]
-        );
+        $data = SubscriptionPackage::create([
+            'code' => Str::upper(Str::random(5)),
+            'customer_id' => $data['customer_id'],
+            'company_id' => $data['company_id'],
+            'package_id' => $data['package_id'],
+            'termin_duration' => $data['termin_duration'],
+            'termin' => $data['termin'],
+            'started_at' => $data['started_at'],
+            'expired_at' => $data['expired_at'],
+            'is_active' => true,
+            'is_trial' => $data['is_trial'] ?? 'trial',
+            'is_grace' => $data['is_grace'] ?? 'active',
+            'grace_started_at' => $data['grace_started_at'] ?? null,
+        ]);
 
         $data->load('package');
         return $data;
@@ -43,7 +40,6 @@ class SubscriptionService
         ])->first();
 
         if (!$existAddon) {
-
             $existAddon = SubscriptionAddon::create([
                 'code' => Str::upper(Str::random(5)),
                 'customer_id' => $data['customer_id'],
@@ -54,11 +50,10 @@ class SubscriptionService
                 'expired_at' => $data['expired_at'],
                 'is_active' => true,
             ]);
-
         } else {
-
+            // Accumulate charge with existing addon charge
             $existAddon->update([
-                'charge' => $data['charge'] + $data['additional_charge'] ,
+                'charge' => $existAddon->charge + $data['charge'],
                 'started_at' => $data['started_at'],
                 'expired_at' => $data['expired_at'],
                 'is_active' => true,

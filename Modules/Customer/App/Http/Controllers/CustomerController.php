@@ -209,10 +209,16 @@ class CustomerController extends Controller
             // Get subscription data from backoffice database by company_id
             $subscription = null;
             if ($customer->company_id) {
+                $today = now()->toDateString();
                 $subscription = DB::table('subscription_packages')
                     ->where('company_id', $customer->company_id)
                     ->where('is_active', true)
-                    ->orderBy('created_at', 'desc')
+                    ->where('is_grace', 'active')
+                    ->whereDate('started_at', '<=', $today)
+                    ->whereDate('expired_at', '>=', $today)
+                    ->orderByDesc('expired_at')
+                    ->orderByDesc('started_at')
+                    ->orderByDesc('created_at')
                     ->first();
             }
             

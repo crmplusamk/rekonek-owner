@@ -27,6 +27,7 @@ Route::prefix('v1/midtrans')->name('api.midtrans.')->group(function () {
     Route::get('payment/get-payment', [CheckoutApiController::class, 'getPayment'])->name('payment.get-payment');
     Route::get('payment/get-status', [CheckoutApiController::class, 'getStatus'])->name('payment.get-status');
     Route::get('payment/get-token', [CheckoutApiController::class, 'getToken'])->name('payment.get-token');
+    Route::post('payment/cancel', [CheckoutApiController::class, 'cancelPayment'])->name('payment.cancel');
 });
 
 /** midtrans route webhook callback */

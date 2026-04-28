@@ -20,11 +20,12 @@ class SendSubscriberExpiryReminderCommand extends Command
         $targetDateLabel = Carbon::today()->addDays(7)->locale('id')->translatedFormat('d F Y');
 
         $rows = DB::table('subscription_packages as sp')
-            ->join('packages as p', 'p.id', '=', 'sp.package_id')
             ->join('contacts as c', 'c.id', '=', 'sp.customer_id')
             ->whereNotNull('sp.expired_at')
             ->where('sp.is_active', true)
-            ->where('p.name', '!=', 'Free')
+            ->where('sp.is_grace', 'active')
+            ->where('sp.is_trial', 'subs')
+            ->whereDate('sp.started_at', '<=', Carbon::today()->toDateString())
             ->whereDate('sp.expired_at', $targetDate)
             ->select([
                 'sp.id as subscription_id',

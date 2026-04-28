@@ -20,7 +20,8 @@ class MidtransService
         return (object) [
             "orderId" => $code."-".now()->timestamp,
             "time" => 'hours',
-            "limit" => 24
+            "limit" => 24,
+            "expiresAt" => now()->addHours(24),
         ];
     }
 
@@ -145,5 +146,12 @@ class MidtransService
                 continue;
             }
         }
+    }
+
+    public function cancelOrder(string $orderId)
+    {
+        $transaction = new \Midtrans\Transaction;
+
+        return $transaction->cancel($orderId);
     }
 }

@@ -31,7 +31,8 @@ Route::get('authentication/{companyid}', function ($companyid) {
 
     try {
 
-        $subsPackage = SubscriptionPackage::where('company_id', $companyid)
+        $subsPackage = SubscriptionPackage::forCompany($companyid)
+            ->currentEffective()
             ->with(['package.features.addon.subscriptionAddons' => function ($query) use ($companyid) {
                 $query->where([
                     'is_active' => true,
@@ -39,6 +40,13 @@ Route::get('authentication/{companyid}', function ($companyid) {
                 ]);
             }])
             ->first();
+
+        if (! $subsPackage) {
+            return response()->json([
+                'error' => true,
+                'message' => 'No active subscription for current period.',
+            ], 404);
+        }
 
         $subsAddon = SubscriptionAddon::where('company_id', $companyid)
             ->with('addon.feature')

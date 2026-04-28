@@ -1,5 +1,7 @@
 <?php
 
+use App\Jobs\DeleteCompanyDataJob;
+use App\Jobs\DeleteCompanyMongoDataJob;
 use App\Models\Contact;
 use App\Models\Feature;
 use App\Models\Package;
@@ -25,9 +27,26 @@ use Modules\Invoices\App\Models\Invoice;
 |
 */
 
-Route::get('ada', function() {
+Route::get('/testing/company-purge', function (Request $request) {
+    $companyId = trim((string) $request->query('company_id', ''));
 
+    if ($companyId === '') {
+        return response()->json([
+            'message' => 'company_id query param is required.',
+        ], 422);
+    }
+
+    DeleteCompanyDataJob::dispatch($companyId);
+    DeleteCompanyMongoDataJob::dispatch($companyId);
+
+    return response()->json([
+        'message'    => 'Company purge jobs have been queued (postgres + mongo).',
+        'company_id' => $companyId,
+        'queues'     => [
+            'postgres' => 'company_data_purge',
+            'mongo'    => 'company_data_purge_mongo',
+        ],
+    ], 202);
 });
-
 
 

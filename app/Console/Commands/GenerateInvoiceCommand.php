@@ -22,7 +22,7 @@ class GenerateInvoiceCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Generate renewal invoices 5 days before subscription expires';
+    protected $description = 'Generate renewal invoices 7 days before subscription expires';
 
     /**
      * Execute the console command.
@@ -31,10 +31,12 @@ class GenerateInvoiceCommand extends Command
     {
         $this->info('Starting invoice generation for renewals...');
 
-        $fiveDaysFromNow = Carbon::now()->addDays(5)->format('Y-m-d');
+        $sevenDaysFromNow = Carbon::now()->addDays(7)->format('Y-m-d');
 
         $subscriptionPackages = SubscriptionPackage::where('is_active', true)
-            ->whereDate('expired_at', $fiveDaysFromNow)
+            ->where('is_grace', 'active')
+            ->whereDate('started_at', '<=', Carbon::today()->toDateString())
+            ->whereDate('expired_at', $sevenDaysFromNow)
             ->select(['id', 'company_id'])
             ->get();
 

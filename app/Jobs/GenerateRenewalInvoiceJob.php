@@ -176,7 +176,7 @@ class GenerateRenewalInvoiceJob implements ShouldQueue, ShouldBeUnique
                 'customer_phone' => $customer->phone ?? '',
                 'customer_address' => $customer->address ?? '',
                 'date' => now(),
-                'due_date' => now()->addDays(2),
+                'due_date' => Carbon::parse($subsPackage->expired_at),
                 'tax' => $calculate['tax'],
                 'tax_amount' => $calculate['tax_amount'],
                 'discount_percentage' => 0,

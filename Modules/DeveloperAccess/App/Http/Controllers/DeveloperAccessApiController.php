@@ -3,9 +3,7 @@
 namespace Modules\DeveloperAccess\App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Modules\DeveloperAccess\App\Repositories\DeveloperAccessRepository;
 
@@ -20,22 +18,19 @@ class DeveloperAccessApiController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Get list of CRM users (client DB) for the developer-access modal select.
      */
-    public function store(Request $request)
+    public function getUsers(Request $request)
     {
         try {
-
-            $access = $this->developerAccessRepo->create($request->all());
+            $users = $this->developerAccessRepo->getClientUsersForSelect();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Ok',
-                'data' => $access
+                'data' => $users instanceof \Illuminate\Support\Collection ? $users->values()->all() : $users,
             ], 200);
-
         } catch (\Exception $e) {
-
             return response()->json([
                 'error' => true,
                 'message' => $e->getMessage()

@@ -34,6 +34,11 @@
                             <option value="100">Tampil 100 data</option>
                         </select>
                     </div>
+                    <div class="col-md-7 mb-2 text-right">
+                        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#createAccessModal">
+                            <i class="mdi mdi-plus"></i> Buat Akses Developer
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -62,11 +67,10 @@
                                 <td> {{ $data->account_name }} </td>
                                 <td> {{ $data->account_email }} </td>
                                 <td> {{ str_replace('_', ' ', $data->time_access) }} </td>
-                                <td> {{ substr($data->note, 0, 50) }} </td>
+                                <td> {{ substr($data->note ?? '', 0, 50) }} </td>
                                 <td> {{ $data->company_name }} </td>
                                 @php
                                     $targetDate = \Carbon\Carbon::parse($data->end_date);
-                                    $currentDate = \Carbon\Carbon::now();
                                 @endphp
                                 <td class="text-center {{ !$targetDate->isPast() ? "text-success" : "text-danger" }}">
                                     <i class="mdi mdi-check-circle"></i>
@@ -90,6 +94,73 @@
         </div>
     </div>
 </div>
+
+<!-- Create Access Modal -->
+<div class="modal fade" id="createAccessModal" tabindex="-1" role="dialog" aria-labelledby="createAccessModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createAccessModalLabel">Buat Akses Developer</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createAccessForm" method="POST" action="{{ route('developer-access.store') }}">
+                @csrf
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label for="user_id" class="mb-1">Pilih User <span class="text-danger">*</span></label>
+                        <select class="form-control" id="user_id" name="user_id" required style="width: 100%;">
+                            <option value="">-- Pilih User --</option>
+                            @foreach ($crmUsers as $u)
+                                @php
+                                    $label = ($u->name ?? '-') . ' (' . ($u->email ?? '-') . ')';
+                                    if (!empty($u->company_name)) {
+                                        $label .= ' — ' . $u->company_name;
+                                    }
+                                    if (!empty($u->is_superadmin)) {
+                                        $label .= ' [superadmin]';
+                                    }
+                                    if (isset($u->is_active) && ! $u->is_active) {
+                                        $label .= ' [nonaktif]';
+                                    }
+                                @endphp
+                                <option
+                                    value="{{ $u->id }}"
+                                    data-company-id="{{ $u->company_id }}"
+                                    data-company-name="{{ e($u->company_name ?? '') }}"
+                                >{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <small class="form-text text-muted">Daftar user dari database CRM (koneksi <code>client</code>), di-render saat halaman ini dimuat.</small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="time_access" class="mb-1">Durasi Akses <span class="text-danger">*</span></label>
+                        <select class="form-control" id="time_access" name="time_access" required>
+                            <option value="1_day">1 Hari</option>
+                            <option value="3_days">3 Hari</option>
+                            <option value="7_days" selected>7 Hari</option>
+                            <option value="14_days">14 Hari</option>
+                            <option value="30_days">30 Hari</option>
+                            <option value="90_days">90 Hari</option>
+                            <option value="forever">Selamanya</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label for="note" class="mb-1">Catatan</label>
+                        <textarea class="form-control" id="note" name="note" rows="3" placeholder="Contoh: Akses untuk development fitur baru"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="mdi mdi-check"></i> Buat Akses
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('script')
@@ -109,7 +180,10 @@
             heightMatch: 'none',
             dom: 'lrtip',
             length: 10,
-            stateSave: true
+            stateSave: false,
+            language: {
+                emptyTable: 'Belum ada data akses developer'
+            }
         });
 
         $('#search').on('keyup', function()
@@ -129,6 +203,49 @@
         });
 
         table.column(6).search('Active', true, false, false).draw();
+
+        var $userSelect = $('#user_id');
+        var $accessModal = $('#createAccessModal');
+
+        function destroyUserSelect2() {
+            if ($userSelect.hasClass('select2-hidden-accessible')) {
+                $userSelect.select2('destroy');
+            }
+        }
+
+        function initUserSelect2() {
+            if ($userSelect.hasClass('select2-hidden-accessible')) {
+                $userSelect.select2('destroy');
+            }
+            $userSelect.select2({
+                placeholder: '-- Pilih User --',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $accessModal
+            });
+        }
+
+        // Select2 di modal: opsi user sudah di-render dari server (Blade); init saat modal dibuka agar dropdownParent benar
+        $accessModal.on('show.bs.modal', function () {
+            initUserSelect2();
+        });
+
+        $accessModal.on('hidden.bs.modal', function () {
+            destroyUserSelect2();
+        });
+
+        // Submit form biasa (POST + CSRF): notifikasi lewat Laravel notify() setelah redirect
+        $('#createAccessForm').on('submit', function () {
+            if (!$userSelect.val()) {
+                if (typeof window.showMessage === 'function') {
+                    window.showMessage('error', 'Silakan pilih user terlebih dahulu');
+                } else {
+                    alert('Silakan pilih user terlebih dahulu');
+                }
+                return false;
+            }
+            return true;
+        });
     })
 </script>
 @endpush

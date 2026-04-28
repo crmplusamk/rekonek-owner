@@ -192,11 +192,24 @@ class CheckoutApiController extends Controller
         DB::beginTransaction();
         try {
 
-            $items = [];
-            $subtotal = 0;
-
             /** verify customer */
             $customer = $this->customerRepo->getByCompanyId($request->company_id);
+
+            /** Check active subscription - only subscribers can buy addon */
+            $activeSubscription = SubscriptionPackage::forCompany($request->company_id)
+                ->currentEffective()
+                ->where('is_trial', 'subs')
+                ->first();
+
+            if (!$activeSubscription) {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'Anda harus memiliki langganan aktif untuk membeli addon. Silakan berlangganan terlebih dahulu.',
+                ], 403);
+            }
+
+            $items = [];
+            $subtotal = 0;
 
             /** verify items */
             foreach($request->items as $item)
@@ -367,6 +380,9 @@ class CheckoutApiController extends Controller
 
             $invoice = $this->invoiceRepo->findUnpaidById($request->invoice_id);
             if (!$invoice) return response()->json(["error" => true, "message" => "Not Found"], 404);
+            if ($invoice->due_date && Carbon::parse($invoice->due_date)->isBefore(Carbon::today())) {
+                return response()->json(["error" => true, "message" => "Invoice telah expired"], 422);
+            }
 
             /** cancel invoice payments */
             $payments = $invoice->payments()->whereIn("is_status", [0,1])->get();
@@ -385,7 +401,7 @@ class CheckoutApiController extends Controller
                 'invoice_id' => $invoice->id,
                 'order_id' => $setOrder->orderId,
                 'date' => now(),
-                'due_date' => now()->add($setOrder->time, $setOrder->limit),
+                'due_date' => $setOrder->expiresAt,
                 'method' => null,
                 'total' => $invoice->total,
                 'is_status' => 0,
@@ -413,6 +429,53 @@ class CheckoutApiController extends Controller
             ], 200);
 
         } catch (\Throwable $th) {
+
+            return response()->json([
+                'error' => true,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+    public function cancelPayment(Request $request)
+    {
+        DB::beginTransaction();
+        try {
+            $payment = $this->paymentRepo->findById($request->payment_id);
+            if (!$payment) return response()->json(["error" => true, "message" => "Not Found"], 404);
+            if (! in_array((int) $payment->is_status, [0, 1], true)) {
+                return response()->json(["error" => true, "message" => "Payment tidak dapat dibatalkan"], 422);
+            }
+
+            if ($payment->method) {
+                $this->midtransSrv->cancelOrder($payment->order_id);
+            }
+
+            $this->paymentRepo->update($payment, [
+                'is_status' => 3,
+                'note' => $payment->method ? 'Dibatalkan dari aplikasi dan Midtrans' : 'Dibatalkan dari aplikasi',
+            ]);
+
+            LogService::create([
+                'fid' => $payment->id,
+                'category' => 'order',
+                'title' => 'Status Pembayaran',
+                'note' => "Pembayaran dengan order id {$payment->order_id} telah dibatalkan",
+                'company_id' => $payment->invoice->company_id
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment berhasil dibatalkan',
+            ], 200);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            Log::error('Cancel payment failed', [
+                'payment_id' => $request->payment_id,
+                'error' => $th->getMessage(),
+            ]);
 
             return response()->json([
                 'error' => true,
@@ -528,18 +591,6 @@ class CheckoutApiController extends Controller
         $subsPackage = $invoice->items->where('itemable_type', 'Modules\Package\App\Models\Package')->first();
         $subsAddons = $invoice->items->where('itemable_type', 'Modules\Addon\App\Models\Addon');
 
-        if ($invoiceType === 'new') {
-            $deletedPackages = SubscriptionPackage::where('company_id', $invoice->company_id)->delete();
-            $deletedAddons = SubscriptionAddon::where('company_id', $invoice->company_id)->delete();
-            LogService::create([
-                'fid' => $invoice->id,
-                'category' => 'subscription',
-                'title' => 'Menghapus Langganan Lama',
-                'note' => "Menghapus langganan lama untuk invoice {$invoice->code} (gratis)",
-                'company_id' => $invoice->company_id
-            ]);
-        }
-
         if ($subsPackage) {
             $dataSubsPackage = $this->subscriptionSrv->updatePackage([
                 'customer_id' => $client->id,
@@ -549,6 +600,10 @@ class CheckoutApiController extends Controller
                 'started_at' => $subsPackage->start_date,
                 'expired_at' => $subsPackage->end_date,
                 'is_active' => true,
+                'is_trial' => 'subs',
+                // Silent resume dari grace period (jika sebelumnya di-grace).
+                'is_grace' => 'active',
+                'grace_started_at' => null,
                 'company_id' => $invoice->company_id
             ]);
             $logTitle = $invoiceType === 'new' ? 'Membuat Langganan Baru' : 'Upgrade Langganan';
@@ -562,13 +617,18 @@ class CheckoutApiController extends Controller
         }
 
         foreach ($subsAddons as $subsAddon) {
+            // Get existing subscription for addon expiry alignment
+            $existingSubs = SubscriptionPackage::forCompany($invoice->company_id)
+                ->currentEffective()
+                ->first();
+
             $dataSubsAddon = $this->subscriptionSrv->updateAddon([
                 'customer_id' => $client->id,
                 'addon_id' => $subsAddon->itemable_id,
                 'charge' => $subsAddon->charge,
                 'additional_charge' => $subsAddon->additional_charge ?? 0,
                 'started_at' => $subsAddon->start_date,
-                'expired_at' => $subsAddon->end_date,
+                'expired_at' => $existingSubs ? $existingSubs->expired_at : $subsAddon->end_date,
                 'is_active' => true,
                 'company_id' => $invoice->company_id
             ]);
@@ -730,23 +790,6 @@ class CheckoutApiController extends Controller
         $subsPackage = $invoice->items->where('itemable_type', 'Modules\Package\App\Models\Package')->first();
         $subsAddons = $invoice->items->where('itemable_type', 'Modules\Addon\App\Models\Addon')->all();
 
-        /** if type is 'new', delete all existing subscriptions (package + addon) first */
-        if ($invoiceType === 'new') {
-            // Delete all existing subscription packages
-            $deletedPackages = SubscriptionPackage::where('company_id', $invoice->company_id)->delete();
-            
-            // Delete all existing subscription addons
-            $deletedAddons = SubscriptionAddon::where('company_id', $invoice->company_id)->delete();
-
-            LogService::create([
-                'fid' => $invoice->id,
-                'category' => 'subscription',
-                'title' => 'Menghapus Langganan Lama',
-                'note' => "Menghapus semua langganan lama (paket: {$deletedPackages}, addon: {$deletedAddons}) untuk invoice {$invoice->code}",
-                'company_id' => $invoice->company_id
-            ]);
-        }
-
         /** create/update package subscription */
         if ($subsPackage) {
             $dataSubsPackage = $this->subscriptionSrv->updatePackage([
@@ -757,6 +800,10 @@ class CheckoutApiController extends Controller
                 'started_at' => $subsPackage->start_date,
                 'expired_at' => $subsPackage->end_date,
                 'is_active' => true,
+                'is_trial' => 'subs',
+                // Silent resume dari grace period (jika sebelumnya di-grace).
+                'is_grace' => 'active',
+                'grace_started_at' => null,
                 'company_id' => $invoice->company_id
             ]);
 
@@ -772,6 +819,11 @@ class CheckoutApiController extends Controller
 
         /** create/update addon subscription */
         if ($subsAddons) {
+            // Get existing subscription for addon expiry alignment
+            $existingSubs = SubscriptionPackage::forCompany($invoice->company_id)
+                ->currentEffective()
+                ->first();
+
             foreach($subsAddons as $subsAddon)
             {
                 $dataSubsAddon = $this->subscriptionSrv->updateAddon([
@@ -780,7 +832,7 @@ class CheckoutApiController extends Controller
                     'charge' => $subsAddon->charge,
                     'additional_charge' => $subsAddon->additional_charge ?? 0,
                     'started_at' => $subsAddon->start_date,
-                    'expired_at' => $subsAddon->end_date,
+                    'expired_at' => $existingSubs ? $existingSubs->expired_at : $subsAddon->end_date,
                     'is_active' => true,
                     'company_id' => $invoice->company_id
                 ]);
@@ -850,7 +902,7 @@ class CheckoutApiController extends Controller
             'invoice_id' => $invoice->id,
             'order_id' => $setOrder->orderId,
             'date' => now(),
-            'due_date' => now()->add($setOrder->time, $setOrder->limit),
+            'due_date' => $setOrder->expiresAt,
             'method' => null,
             'total' => $invoice->total,
             'is_status' => 0,

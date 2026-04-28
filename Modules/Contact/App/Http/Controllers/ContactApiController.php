@@ -153,17 +153,18 @@ class ContactApiController extends Controller
             /** verify customer */
             $customer = $this->contactRepo->verify($request->all());
 
-            /** get package */
-            $package = $this->packageRepo->getByName('Free');
+            /** get package - Business trial untuk user baru */
+            $package = $this->packageRepo->getByName('Business');
 
-            /** create subs: Free trial 14 hari (inklusif tanggal mulai) */
+            /** create subs: Business trial 7 hari (inklusif tanggal mulai) */
             $subscriptionStartedAt = now();
             $subs = $this->subsRepo->create([
                 'package_id' => $package->id,
                 'customer_id' => $customer->id,
                 'is_active' => true,
+                'is_trial' => 'trial',
                 'started_at' => $subscriptionStartedAt,
-                'expired_at' => $subscriptionStartedAt->copy()->addDays(13)->endOfDay(),
+                'expired_at' => $subscriptionStartedAt->copy()->addDays(6)->endOfDay(),
                 'company_id' => $customer->company_id,
             ]);
 

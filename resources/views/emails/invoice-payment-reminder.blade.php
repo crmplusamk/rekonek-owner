@@ -11,7 +11,7 @@
         <tbody>
             <tr>
                 <td align="center" valign="center" style="text-align:center; padding: 40px">
-                    <a href="{{ env('CRM_CLIENT_HOST') }}" class="logo">
+                    <a href="{{ env('CRM_CLIENT_HOST') }}/login" class="logo">
                         <img src="{{ URL::to('assets/images/logo.png') }}" style="width: 150px; height:70px" alt="logo" />
                     </a>
                 </td>
@@ -59,7 +59,7 @@
                         </div>
 
                         <div style="padding-bottom: 40px; text-align:center;">
-                            <a href="{{ env('CRM_CLIENT_HOST') }}/billing/invoice"
+                            <a href="{{ env('CRM_CLIENT_HOST') }}/login?redirect=%2Fbilling%2Finvoice"
                                 rel="noopener"
                                 style="text-decoration:none;display:inline-block;text-align:center;padding:0.75575rem 1.3rem;font-size:0.925rem;line-height:1.5;border-radius:0.35rem;color:#ffffff;background-color:#2465FF;border:0px;margin-right:0.75rem!important;font-weight:600!important;outline:none!important;vertical-align:middle"
                                 target="_blank">

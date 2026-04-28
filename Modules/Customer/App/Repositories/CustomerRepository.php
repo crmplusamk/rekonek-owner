@@ -3,6 +3,7 @@
 namespace Modules\Customer\App\Repositories;
 
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Modules\Customer\App\Models\Customer;
 
 class CustomerRepository
@@ -104,7 +105,7 @@ class CustomerRepository
                 $orderMappings = [
                     "1" => 'name',
                     "2" => 'code',
-                    "4" => 'created_at',
+                    "5" => 'created_at',
                 ];
 
                 if (isset($orderMappings[$column])) {
@@ -129,6 +130,19 @@ class CustomerRepository
                     'customer' => $customer
                 ]);
             })
+            ->addColumn('last_login', function ($customer) {
+                $lastLogin = DB::connection('client')
+                    ->table('users')
+                    ->where('company_id', $customer->company_id)
+                    ->whereNotNull('last_login_at')
+                    ->max('last_login_at');
+
+                if (!$lastLogin) {
+                    return '-';
+                }
+
+                return \Carbon\Carbon::parse($lastLogin)->format('d M Y H:i');
+            })
             ->addColumn('code', function ($customer) {
                 return view('customer::table_partials._code', [
                     'customer' => $customer
@@ -142,6 +156,49 @@ class CustomerRepository
             ->addColumn('status', function ($customer) {
                 return view('customer::table_partials._status', [
                     'customer' => $customer
+                ]);
+            })
+            ->addColumn('subscription', function ($customer) {
+                $today = now()->toDateString();
+                $subscription = DB::table('subscription_packages')
+                    ->where('company_id', $customer->company_id)
+                    ->where('is_active', true)
+                    ->where('is_grace', 'active')
+                    ->whereDate('started_at', '<=', $today)
+                    ->whereDate('expired_at', '>=', $today)
+                    ->orderByDesc('expired_at')
+                    ->orderByDesc('started_at')
+                    ->orderByDesc('created_at')
+                    ->first();
+
+                $package = null;
+                if ($subscription && $subscription->package_id) {
+                    $package = DB::table('packages')
+                        ->where('id', $subscription->package_id)
+                        ->first();
+                }
+
+                return view('customer::table_partials._subscription', [
+                    'customer' => $customer,
+                    'subscription' => $subscription,
+                    'package' => $package,
+                ]);
+            })
+            ->addColumn('subscription_period', function ($customer) {
+                $today = now()->toDateString();
+                $subscription = DB::table('subscription_packages')
+                    ->where('company_id', $customer->company_id)
+                    ->where('is_active', true)
+                    ->where('is_grace', 'active')
+                    ->whereDate('started_at', '<=', $today)
+                    ->whereDate('expired_at', '>=', $today)
+                    ->orderByDesc('expired_at')
+                    ->orderByDesc('started_at')
+                    ->orderByDesc('created_at')
+                    ->first();
+
+                return view('customer::table_partials._subscription_period', [
+                    'subscription' => $subscription,
                 ]);
             })
             ->addColumn('action', function ($customer) {

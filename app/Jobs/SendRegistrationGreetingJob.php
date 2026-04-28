@@ -15,6 +15,8 @@ class SendRegistrationGreetingJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public const SETUP_VIDEO_URL = 'https://www.youtube.com/watch?v=u063lZ-zDGQ';
+
     public function __construct(
         public ?string $phone,
         public string $customerName
@@ -38,17 +40,7 @@ class SendRegistrationGreetingJob implements ShouldQueue
                 return;
             }
 
-            $message = "Halo Kak *{$this->customerName}*! 👋\n\n".
-                "Terima kasih sudah memilih Rekonek untuk jadi pusat komando bisnis Anda. Akun Anda sudah siap!\n\n".
-                "Agar tidak bingung, yuk tonton video panduan setup 2 menit ini:\n".
-                "https://www.youtube.com/watch?v=u063lZ-zDGQ\n\n".
-                "*Langkah pertama Anda:*\n\n".
-                "1. Login ke Dashboard:\n".
-                "https://app.rekonek.com/login\n\n".
-                "2. Hubungkan WhatsApp (Scan QR)\n\n".
-                "3. Atur akses tim Anda.\n\n".
-                "Selamat tinggal blindspot 🚀\n\n".
-                '_Ini adalah pesan otomatis dari Rekonek_';
+            $message = self::buildMessage($this->customerName);
 
             $result = WhatsappHelper::sendTextMessage(
                 $session->session,
@@ -66,5 +58,22 @@ class SendRegistrationGreetingJob implements ShouldQueue
                 'phone' => $this->phone,
             ]);
         }
+    }
+
+    public static function buildMessage(string $customerName): string
+    {
+        $dashboardLoginUrl = rtrim((string) env('CRM_CLIENT_HOST'), '/').'/login';
+
+        return "Halo Kak *{$customerName}*! 👋\n\n".
+            "Terima kasih sudah memilih Rekonek untuk jadi pusat komando bisnis Anda. Akun Anda sudah siap!\n\n".
+            "Agar tidak bingung, yuk tonton video panduan setup 2 menit ini:\n".
+            self::SETUP_VIDEO_URL."\n\n".
+            "*Langkah pertama Anda:*\n\n".
+            "1. Login ke Dashboard:\n".
+            $dashboardLoginUrl."\n\n".
+            "2. Hubungkan WhatsApp (Scan QR)\n\n".
+            "3. Atur akses tim Anda.\n\n".
+            "Selamat tinggal blindspot 🚀\n\n".
+            '_Ini adalah pesan otomatis dari Rekonek_';
     }
 }

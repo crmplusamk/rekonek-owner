@@ -16,6 +16,6 @@ use Modules\DeveloperAccess\App\Http\Controllers\DeveloperAccessApiController;
 */
 
 Route::prefix('v1')->name('api.')->group(function () {
-    Route::post('developer-access/create', [DeveloperAccessApiController::class, 'store'])->name('developer-access.store');
+    Route::get('developer-access/users', [DeveloperAccessApiController::class, 'getUsers'])->name('developer-access.users');
     Route::post('developer-access/delete-bulk-by-token', [DeveloperAccessApiController::class, 'destroyBulkByToken'])->name('developer-access.delete-token-bulk');
 });

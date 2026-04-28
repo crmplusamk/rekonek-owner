@@ -16,4 +16,5 @@ use Modules\DeveloperAccess\App\Http\Controllers\DeveloperAccessController;
 
 Route::middleware('auth')->group(function () {
     Route::get('developer-access', [DeveloperAccessController::class, 'index'])->name('developer-access.index');
+    Route::post('developer-access', [DeveloperAccessController::class, 'store'])->name('developer-access.store');
 });

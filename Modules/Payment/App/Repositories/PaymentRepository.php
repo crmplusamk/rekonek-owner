@@ -34,6 +34,11 @@ class PaymentRepository
         return $data;
     }
 
+    public function findById($id)
+    {
+        return Payment::with('invoice')->find($id);
+    }
+
     public function update($payment, $data)
     {
         $data = $payment->update($data);

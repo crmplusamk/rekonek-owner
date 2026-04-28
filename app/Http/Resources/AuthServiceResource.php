@@ -21,6 +21,7 @@ class AuthServiceResource extends JsonResource
                 'start_date' => $this['subsPackage']->started_at,
                 'end_date' => $this['subsPackage']->expired_at,
                 'is_active' => $this['subsPackage']->is_active,
+                'is_trial' => $this['subsPackage']->is_trial,
                 'grece_day_ended_at' => $this['subsPackage']->grece_day_ended_at,
                 'termin_duration' => $this['subsPackage']->termin_duration,
                 'termin' => $this['subsPackage']->termin,
