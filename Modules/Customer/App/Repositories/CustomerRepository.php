@@ -2,12 +2,18 @@
 
 namespace Modules\Customer\App\Repositories;
 
+use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Modules\Customer\App\Models\Customer;
 
 class CustomerRepository
 {
+    private const SUBSCRIPTION_CONTEXT_ACTIVE = 'active';
+    private const SUBSCRIPTION_CONTEXT_GRACE = 'grace';
+    private const SUBSCRIPTION_CONTEXT_ENDED = 'ended';
+    private const SUBSCRIPTION_CONTEXT_INACTIVE = 'inactive';
+    private const SUBSCRIPTION_CONTEXT_NONE = 'none';
 
     public function list($request)
     {
@@ -159,46 +165,23 @@ class CustomerRepository
                 ]);
             })
             ->addColumn('subscription', function ($customer) {
-                $today = now()->toDateString();
-                $subscription = DB::table('subscription_packages')
-                    ->where('company_id', $customer->company_id)
-                    ->where('is_active', true)
-                    ->where('is_grace', 'active')
-                    ->whereDate('started_at', '<=', $today)
-                    ->whereDate('expired_at', '>=', $today)
-                    ->orderByDesc('expired_at')
-                    ->orderByDesc('started_at')
-                    ->orderByDesc('created_at')
-                    ->first();
-
-                $package = null;
-                if ($subscription && $subscription->package_id) {
-                    $package = DB::table('packages')
-                        ->where('id', $subscription->package_id)
-                        ->first();
-                }
+                $resolved = $this->resolveSubscriptionForCompany($customer->company_id);
 
                 return view('customer::table_partials._subscription', [
                     'customer' => $customer,
-                    'subscription' => $subscription,
-                    'package' => $package,
+                    'subscription' => $resolved['subscription'],
+                    'package' => $resolved['package'],
+                    'context' => $resolved['context'],
+                    'contextLabel' => $resolved['context_label'],
                 ]);
             })
             ->addColumn('subscription_period', function ($customer) {
-                $today = now()->toDateString();
-                $subscription = DB::table('subscription_packages')
-                    ->where('company_id', $customer->company_id)
-                    ->where('is_active', true)
-                    ->where('is_grace', 'active')
-                    ->whereDate('started_at', '<=', $today)
-                    ->whereDate('expired_at', '>=', $today)
-                    ->orderByDesc('expired_at')
-                    ->orderByDesc('started_at')
-                    ->orderByDesc('created_at')
-                    ->first();
+                $resolved = $this->resolveSubscriptionForCompany($customer->company_id);
 
                 return view('customer::table_partials._subscription_period', [
-                    'subscription' => $subscription,
+                    'subscription' => $resolved['subscription'],
+                    'context' => $resolved['context'],
+                    'contextLabel' => $resolved['context_label'],
                 ]);
             })
             ->addColumn('action', function ($customer) {
@@ -208,4 +191,86 @@ class CustomerRepository
             })
             ->make();
     }
+
+    /**
+     * Langganan untuk tabel customer: utamakan yang masih efektif hari ini;
+     * jika tidak ada, fallback ke baris terbaru per company (grace / berakhir) agar kolom tidak kosong.
+     *
+     * @return array{subscription: object|null, package: object|null, context: string, context_label: string|null}
+     */
+    private function resolveSubscriptionForCompany(?string $companyId): array
+    {
+        if (! $companyId) {
+            return [
+                'subscription' => null,
+                'package' => null,
+                'context' => self::SUBSCRIPTION_CONTEXT_NONE,
+                'context_label' => null,
+            ];
+        }
+
+        $today = now()->toDateString();
+        $subscription = DB::table('subscription_packages')
+            ->where('company_id', $companyId)
+            ->where('is_active', true)
+            ->where('is_grace', self::SUBSCRIPTION_CONTEXT_ACTIVE)
+            ->whereDate('started_at', '<=', $today)
+            ->whereDate('expired_at', '>=', $today)
+            ->orderByDesc('expired_at')
+            ->orderByDesc('started_at')
+            ->orderByDesc('created_at')
+            ->first();
+        $context = self::SUBSCRIPTION_CONTEXT_ACTIVE;
+
+        if (! $subscription) {
+            $subscription = DB::table('subscription_packages')
+                ->where('company_id', $companyId)
+                ->orderByDesc('expired_at')
+                ->orderByDesc('started_at')
+                ->orderByDesc('created_at')
+                ->first();
+
+            if (! $subscription) {
+                return [
+                    'subscription' => null,
+                    'package' => null,
+                    'context' => self::SUBSCRIPTION_CONTEXT_NONE,
+                    'context_label' => null,
+                ];
+            }
+
+            if ($subscription->is_grace === self::SUBSCRIPTION_CONTEXT_GRACE) {
+                $context = self::SUBSCRIPTION_CONTEXT_GRACE;
+            } elseif ($subscription->expired_at && Carbon::parse($subscription->expired_at)->toDateString() < $today) {
+                $context = self::SUBSCRIPTION_CONTEXT_ENDED;
+            } else {
+                $context = self::SUBSCRIPTION_CONTEXT_INACTIVE;
+            }
+        }
+
+        $package = null;
+        if ($subscription->package_id) {
+            $package = DB::table('packages')
+                ->where('id', $subscription->package_id)
+                ->first();
+        }
+
+        return [
+            'subscription' => $subscription,
+            'package' => $package,
+            'context' => $context,
+            'context_label' => $this->subscriptionContextLabel($context),
+        ];
+    }
+
+    private function subscriptionContextLabel(string $context): ?string
+    {
+        return match ($context) {
+            self::SUBSCRIPTION_CONTEXT_GRACE => 'Grace',
+            self::SUBSCRIPTION_CONTEXT_ENDED => 'Tidak aktif',
+            self::SUBSCRIPTION_CONTEXT_INACTIVE => 'Non-aktif',
+            default => null,
+        };
+    }
+
 }
