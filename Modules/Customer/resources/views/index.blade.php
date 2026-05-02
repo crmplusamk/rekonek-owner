@@ -75,6 +75,7 @@
                             <th class="text-center">Register At</th>
                             <th class="text-center">Last Login</th>
                             <th class="text-center">Subscription</th>
+                            <th class="text-center">Started</th>
                             <th class="text-center">Expired</th>
                             <th class="text-center">Status</th>
                             <th data-orderable="false"></th>
@@ -98,6 +99,7 @@
 
     let customertable;
     let search = '';
+    let filterStatus = '1';
 
     function customerTable()
     {
@@ -110,6 +112,7 @@
                 dataType: 'json',
                 data: function(d) {
                     d.search = search;
+                    d.filter_status = filterStatus;
                 },
             },
             columns: [
@@ -136,15 +139,15 @@
                 },
                 {
                     data: "subscription",
-                    sortable: false,
                 },
                 {
-                    data: "subscription_period",
-                    sortable: false,
+                    data: "subscription_started_at",
+                },
+                {
+                    data: "subscription_expired_at",
                 },
                 {
                     data: "status",
-                    sortable: false,
                 },
                 {
                     data: "action",
@@ -154,7 +157,7 @@
             columnDefs: [
                 {
                     className: 'dt-center',
-                    targets: [0, 2, 3, 4, 5, 6, 7, 8]
+                    targets: [0, 2, 3, 4, 5, 6, 7, 8, 9]
                 }
             ],
             dom: 'lrtip',
@@ -173,6 +176,18 @@
 
     $('#showCount').on('change', function() {
         customertable.page.len(this.value).draw();
+    });
+
+    $('input[name="filter_status"]').on('change', function() {
+        filterStatus = this.value;
+        customertable.ajax.reload();
+    });
+
+    // Enable/disable purge submit button based on password match
+    $(document).on('input', '.purge-password', function() {
+        var form = $(this).closest('form');
+        var expected = form.data('code').toString();
+        form.find('button[type="submit"]').prop('disabled', this.value !== expected);
     });
 </script>
 @endpush

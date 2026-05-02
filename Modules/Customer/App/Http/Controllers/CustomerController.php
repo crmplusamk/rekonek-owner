@@ -3,6 +3,8 @@
 namespace Modules\Customer\App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\DeleteCompanyDataJob;
+use App\Jobs\DeleteCompanyMongoDataJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
@@ -479,6 +481,40 @@ class CustomerController extends Controller
                 'success' => false,
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Dispatch purge jobs (PostgreSQL + MongoDB) for a company.
+     */
+    public function purgeData(Request $request, $id)
+    {
+        try {
+            $customer = $this->customerRepo->detail($id);
+
+            if (!$customer->company_id) {
+                notify()->error("Customer tidak memiliki company_id yang valid.");
+                return back();
+            }
+
+            $expectedPassword = now()->format('ymd') . now()->format('md');
+            if ($request->input('purge_password') !== $expectedPassword) {
+                notify()->error("Kode konfirmasi tidak valid.");
+                return back();
+            }
+
+            $withBackup = $request->boolean('with_backup', true);
+
+            DeleteCompanyDataJob::dispatch($customer->company_id, null, $withBackup);
+            DeleteCompanyMongoDataJob::dispatch($customer->company_id, null, $withBackup);
+
+            $mode = $withBackup ? 'backup + delete' : 'delete only';
+            notify()->success("Job purge data ({$mode}) telah di-queue untuk customer {$customer->name}.");
+            return back();
+
+        } catch (\Exception $e) {
+            notify()->error("Terjadi kesalahan. " . $e->getMessage());
+            return back();
         }
     }
 }

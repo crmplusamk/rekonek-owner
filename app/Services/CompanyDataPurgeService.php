@@ -48,47 +48,61 @@ class CompanyDataPurgeService
      *
      * @return array{
      *   company_id:string,
-     *   backup_path:string,
+     *   backup_path:?string,
      *   plan:array<int,array{table:string,where:string,bindings:array}>,
      *   deleted_rows:array<string,int>,
      *   total_deleted:int
      * }
      */
-    public function purge(string $companyId, ?string $backupDirectory = null): array
+    public function purge(string $companyId, ?string $backupDirectory = null, bool $withBackup = true): array
     {
         $this->assertValidCompanyId($companyId);
         $this->assertCompanyExists($companyId);
 
-        $backupDirectory = $backupDirectory ?: storage_path('app/company-backups');
-        $this->ensureDirectoryExists($backupDirectory);
-
         $plan = $this->buildDeletionPlan($companyId);
 
-        $finalPath = $this->buildBackupPath($backupDirectory, $companyId);
-        $tempPath  = $finalPath . '.tmp';
+        if ($withBackup) {
+            $backupDirectory = $backupDirectory ?: storage_path('app/company-backups');
+            $this->ensureDirectoryExists($backupDirectory);
 
-        try {
-            $this->writeBackupToFile($tempPath, $companyId, $plan);
+            $finalPath = $this->buildBackupPath($backupDirectory, $companyId);
+            $tempPath  = $finalPath . '.tmp';
 
-            $deletedRows = $this->db()->transaction(function () use ($plan) {
-                return $this->executeDeletions($plan);
-            });
+            try {
+                $this->writeBackupToFile($tempPath, $companyId, $plan);
 
-            File::move($tempPath, $finalPath);
+                $deletedRows = $this->db()->transaction(function () use ($plan) {
+                    return $this->executeDeletions($plan);
+                });
 
-            return [
-                'company_id'    => $companyId,
-                'backup_path'   => $finalPath,
-                'plan'          => $plan,
-                'deleted_rows'  => $deletedRows,
-                'total_deleted' => array_sum($deletedRows),
-            ];
-        } catch (Throwable $exception) {
-            if (File::exists($tempPath)) {
-                File::delete($tempPath);
+                File::move($tempPath, $finalPath);
+
+                return [
+                    'company_id'    => $companyId,
+                    'backup_path'   => $finalPath,
+                    'plan'          => $plan,
+                    'deleted_rows'  => $deletedRows,
+                    'total_deleted' => array_sum($deletedRows),
+                ];
+            } catch (Throwable $exception) {
+                if (File::exists($tempPath)) {
+                    File::delete($tempPath);
+                }
+                throw $exception;
             }
-            throw $exception;
         }
+
+        $deletedRows = $this->db()->transaction(function () use ($plan) {
+            return $this->executeDeletions($plan);
+        });
+
+        return [
+            'company_id'    => $companyId,
+            'backup_path'   => null,
+            'plan'          => $plan,
+            'deleted_rows'  => $deletedRows,
+            'total_deleted' => array_sum($deletedRows),
+        ];
     }
 
     /* ----------------------------- VALIDATION ----------------------------- */

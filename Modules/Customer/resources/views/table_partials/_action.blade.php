@@ -11,9 +11,9 @@
     <a class="dropdown-item pointer" data-toggle="modal" data-target="#status-{{ $customer->id }}">
         <i class="mdi mdi-{{ $customer->is_active ? "close" : "check" }}"></i> {{ $customer->is_active ? "Nonaktifkan" : "Aktifkan" }}
     </a>
-    <a class="dropdown-item pointer" data-toggle="modal" data-target="#destroy-{{ $customer->id }}">
+    <a class="dropdown-item pointer text-danger" data-toggle="modal" data-target="#purge-{{ $customer->id }}">
         <i class="mdi mdi-delete"></i>
-        Hapus
+        Hapus Data
     </a>
 </div>
 
@@ -43,34 +43,36 @@
     </div>
 </div>
 
-<div class="modal fade" id="destroy-{{ $customer->id }}" aria-labelledby="destroy" aria-hidden="true">
+<div class="modal fade" id="purge-{{ $customer->id }}" aria-labelledby="purge" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <div class="modal-body modal-body-lg text-center text-wrap text-break">
+            <div class="modal-header">
+                <h5 class="modal-title">Hapus Data — {{ $customer->name }}</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
-                <i class="mdi mdi-comment-question-outline text-primary" style="font-size: 50px"></i>
-                <div class="text-center mt-4">
-                    <h5>Konfirmasi Hapus Data</h5>
-                    <p class="mt-2 text-lg">Apakah anda yakin ingin menghapus customer {{ $customer->name }} ? </p>
-                    <p class="text-danger">Proses ini tidak dapat dibatalkan</p>
-                </div>
-                <div class="modal-action mt-4 mb-3 d-flex justify-content-center align-items-center">
-                    <a data-dismiss="modal" class="btn btn-danger mr-3">
-                        Batal
-                    </a>
-                    <form action="{{ route('customer.destroy', $customer->id) }}" method="post">
-                        @csrf
-                        @method('delete')
-                        <button type="submit" class="btn btn-primary">
-                            Hapus
-                        </button>
-                    </form>
-                </div>
             </div>
+            <form id="purge-form-{{ $customer->id }}" action="{{ route('customer.purge-data', $customer->id) }}" method="post" data-code="{{ now()->format('ymd') . now()->format('md') }}">
+                @csrf
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Tipe Hapus</label>
+                        <select name="with_backup" class="form-control select-2 purge-mode">
+                            <option value="1">Backup + Delete</option>
+                            <option value="0">Delete Only</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Kode Konfirmasi</label>
+                        <input type="password" name="purge_password" class="form-control purge-password" placeholder="Masukkan kode konfirmasi" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger" disabled>Hapus Data</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
-
 

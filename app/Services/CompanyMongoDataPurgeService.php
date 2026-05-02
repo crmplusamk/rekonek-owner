@@ -53,7 +53,7 @@ class CompanyMongoDataPurgeService
      *   total_backed_up:int
      * }
      */
-    public function purge(string $companyId, ?string $backupDirectory = null): array
+    public function purge(string $companyId, ?string $backupDirectory = null, bool $withBackup = true): array
     {
         $this->assertValidCompanyId($companyId);
         $this->assertMongoDriverLoaded();
@@ -69,23 +69,27 @@ class CompanyMongoDataPurgeService
             ];
         }
 
-        $backupDirectory = $backupDirectory ?: storage_path('app/company-backups');
-        $this->ensureDirectoryExists($backupDirectory);
-
-        $finalPath = $this->buildBackupPath($backupDirectory, $companyId);
-        $tempPath  = $finalPath . '.tmp';
-
+        $finalPath = null;
         $backedUpCounts = [];
-        try {
-            $backedUpCounts = $this->writeBackupToFile($tempPath, $companyId, $existingCollections);
-        } catch (Throwable $exception) {
-            if (File::exists($tempPath)) {
-                File::delete($tempPath);
-            }
-            throw $exception;
-        }
 
-        File::move($tempPath, $finalPath);
+        if ($withBackup) {
+            $backupDirectory = $backupDirectory ?: storage_path('app/company-backups');
+            $this->ensureDirectoryExists($backupDirectory);
+
+            $finalPath = $this->buildBackupPath($backupDirectory, $companyId);
+            $tempPath  = $finalPath . '.tmp';
+
+            try {
+                $backedUpCounts = $this->writeBackupToFile($tempPath, $companyId, $existingCollections);
+            } catch (Throwable $exception) {
+                if (File::exists($tempPath)) {
+                    File::delete($tempPath);
+                }
+                throw $exception;
+            }
+
+            File::move($tempPath, $finalPath);
+        }
 
         $report = [];
         foreach ($existingCollections as $collectionName) {

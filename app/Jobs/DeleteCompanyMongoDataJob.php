@@ -37,13 +37,16 @@ class DeleteCompanyMongoDataJob implements ShouldQueue, ShouldBeUnique
 
     public ?string $backupDirectory;
 
-    public function __construct(string $companyId, ?string $backupDirectory = null)
+    public bool $withBackup;
+
+    public function __construct(string $companyId, ?string $backupDirectory = null, bool $withBackup = true)
     {
         $this->companyId = $companyId;
         $this->backupDirectory = $backupDirectory;
+        $this->withBackup = $withBackup;
 
-        // $this->onConnection(config('queue.default'));
-        // $this->onQueue('default');
+        $this->onConnection(config('queue.default'));
+        $this->onQueue('default');
     }
 
     /**
@@ -67,11 +70,13 @@ class DeleteCompanyMongoDataJob implements ShouldQueue, ShouldBeUnique
         Log::info('Company mongo purge job started.', [
             'company_id' => $this->companyId,
             'backup_directory' => $this->backupDirectory,
+            'with_backup' => $this->withBackup,
         ]);
 
         $result = $service->purge(
             $this->companyId,
-            $this->backupDirectory
+            $this->backupDirectory,
+            $this->withBackup
         );
 
         Log::info('Company mongo purge job completed.', [

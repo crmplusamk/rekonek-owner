@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Modules\Subscription\App\Models\SubscriptionPackage;
 use Throwable;
@@ -33,13 +34,16 @@ class DeleteCompanyDataJob implements ShouldQueue, ShouldBeUnique
 
     public ?string $backupDirectory;
 
-    public function __construct(string $companyId, ?string $backupDirectory = null)
+    public bool $withBackup;
+
+    public function __construct(string $companyId, ?string $backupDirectory = null, bool $withBackup = true)
     {
         $this->companyId = $companyId;
         $this->backupDirectory = $backupDirectory;
+        $this->withBackup = $withBackup;
 
-        // $this->onConnection(config('queue.default'));
-        // $this->onQueue('default');
+        $this->onConnection(config('queue.default'));
+        $this->onQueue('default');
     }
 
     /**
@@ -63,18 +67,35 @@ class DeleteCompanyDataJob implements ShouldQueue, ShouldBeUnique
         Log::info('Company purge job started.', [
             'company_id' => $this->companyId,
             'backup_directory' => $this->backupDirectory,
+            'with_backup' => $this->withBackup,
         ]);
 
         $result = $companyDataPurgeService->purge(
             $this->companyId,
-            $this->backupDirectory
+            $this->backupDirectory,
+            $this->withBackup
         );
+
+        $this->markContactAsDeleted();
 
         Log::info('Company purge job completed.', [
             'company_id'    => $this->companyId,
             'backup_path'   => $result['backup_path'],
             'total_deleted' => $result['total_deleted'],
             'tables_count'  => count($result['plan']),
+        ]);
+    }
+
+    private function markContactAsDeleted(): void
+    {
+        $updated = DB::table('contacts')
+            ->where('company_id', $this->companyId)
+            ->whereNull('deleted_at')
+            ->update(['deleted_at' => now()]);
+
+        Log::info('Contact deleted_at marked after purge.', [
+            'company_id' => $this->companyId,
+            'updated'    => $updated,
         ]);
     }
 
