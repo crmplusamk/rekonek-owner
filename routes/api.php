@@ -32,10 +32,8 @@ Route::get('authentication/{companyid}', function ($companyid) {
     try {
 
         $subsPackage = SubscriptionPackage::forCompany($companyid)
-            ->currentEffective()
             ->with(['package.features.addon.subscriptionAddons' => function ($query) use ($companyid) {
                 $query->where([
-                    'is_active' => true,
                     'company_id' => $companyid,
                 ]);
             }])
