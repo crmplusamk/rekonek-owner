@@ -37,6 +37,7 @@ Route::get('authentication/{companyid}', function ($companyid) {
                     'company_id' => $companyid,
                 ]);
             }])
+            ->orderByDesc('expired_at')
             ->first();
 
         if (! $subsPackage) {
