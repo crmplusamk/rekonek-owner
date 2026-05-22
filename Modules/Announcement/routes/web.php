@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\DeveloperAccess\App\Http\Controllers\DeveloperAccessController;
+use Modules\Announcement\App\Http\Controllers\AnnouncementController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,7 +15,7 @@ use Modules\DeveloperAccess\App\Http\Controllers\DeveloperAccessController;
 */
 
 Route::middleware('auth')->group(function () {
-    Route::get('developer-access', [DeveloperAccessController::class, 'index'])->name('developer-access.index');
-    Route::post('developer-access', [DeveloperAccessController::class, 'store'])->name('developer-access.store');
-    Route::post('developer-access/destroy', [DeveloperAccessController::class, 'destroy'])->name('developer-access.destroy');
+    Route::get('announcement/get-datatable', [AnnouncementController::class, 'datatable'])->name('announcement.table');
+    Route::get('announcement/get-companies', [AnnouncementController::class, 'companies'])->name('announcement.companies');
+    Route::resource('announcement', AnnouncementController::class)->names('announcement')->except(['show']);
 });

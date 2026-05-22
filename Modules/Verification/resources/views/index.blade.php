@@ -93,13 +93,18 @@
         try {
 
             const response = await createSession();
+            const qrBase64 = response?.data?.qrcode?.base64;
+            if (!qrBase64) {
+                throw new Error(response?.message || 'QR code tidak tersedia');
+            }
+
             showMessage('success', 'Sedang menunggu qr code');
             $('#whatsappOtpQrCode').modal('show');
-            $('#otpQrCode').attr('src', response.data.qrcode.base64);
+            $('#otpQrCode').attr('src', qrBase64);
 
         } catch (e) {
 
-            showMessage('error', 'Gagal membuat qrcode, silahkan coba lagi.');
+            showMessage('error', e?.message || 'Gagal membuat qrcode, silahkan coba lagi.');
             console.error(e);
         }
     });
@@ -130,7 +135,8 @@
     {
         connection.subscribe(`private-notification.${user.id}`).bind(`App\\Events\\PrivateNotificationEvent`, (content) =>
         {
-            if (content.data.context == 'whatsapp-otp') {
+            console.log(content);
+            if (content?.data?.context == 'whatsapp-otp') {
                 waOtpSocketEvent(content);
             }
         });

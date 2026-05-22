@@ -40,6 +40,11 @@ class DeveloperAccessApiController extends Controller
 
     public function destroyBulkByToken(Request $request)
     {
+        $request->validate([
+            'tokens' => 'required|array|min:1',
+            'tokens.*' => 'required|string',
+        ]);
+
         DB::beginTransaction();
         try {
 

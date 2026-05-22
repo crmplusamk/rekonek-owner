@@ -54,4 +54,29 @@ class DeveloperAccessController extends Controller
 
         return redirect()->route('developer-access.index');
     }
+
+    /**
+     * Hapus satu atau banyak akses developer (by id).
+     */
+    public function destroy(Request $request, DeveloperAccessRepository $developerAccessRepository)
+    {
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'required|uuid',
+        ]);
+
+        try {
+            $deleted = $developerAccessRepository->destroyBulk(ids: $request->input('ids', []));
+
+            if ($deleted === 0) {
+                notify()->warning('Tidak ada data yang dihapus');
+            } else {
+                notify()->success("Berhasil menghapus {$deleted} akses developer");
+            }
+        } catch (\Throwable $e) {
+            notify()->error('Gagal menghapus: ' . $e->getMessage());
+        }
+
+        return redirect()->route('developer-access.index');
+    }
 }

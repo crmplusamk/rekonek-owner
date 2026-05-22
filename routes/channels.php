@@ -24,7 +24,7 @@ Broadcast::channel('notification.{id}', function (User $user, $id) {
 });
 
 Broadcast::channel('whatsapp-session.{session}', function (User $user, $session) {
-    if (WhatsappOtpSession::where('created_at', $user->id)->where('session', $session)->exists()) {
-        return true;
-    }
+    return WhatsappOtpSession::where('created_by', $user->id)
+        ->where('session', $session)
+        ->exists();
 });

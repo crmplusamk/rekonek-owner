@@ -20,6 +20,7 @@ use Modules\WhatsappOtp\App\Http\Controllers\WebhookOtpController;
 */
 
 Route::post('chat-whatsapp-webhook-event/v2/private/{session}/{userId}', [WebhookOtpController::class, 'handle']);
+Route::post('chat-whatsapp-webhook-event/v3/private/{session}/{userId}', [WebhookOtpController::class, 'handle']);
 
 Route::post('access-logs', [AccessLogApiController::class, 'store']);
 
