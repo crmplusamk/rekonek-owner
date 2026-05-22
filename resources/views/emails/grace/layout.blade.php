@@ -7,7 +7,7 @@
 </style>
 
 @php
-    $actionUrl = $actionUrl ?? env('CRM_CLIENT_HOST') . '/login?redirect=%2Fcrm%2Fbilling%2Fsubscription';
+    $actionUrl = $actionUrl ?? 'https://app.rekonek.com' . '/login?redirect=%2Fcrm%2Fbilling%2Fsubscription';
     $actionText = $actionText ?? 'Aktifkan Kembali';
 @endphp
 
@@ -16,7 +16,7 @@
         <tbody>
             <tr>
                 <td align="center" valign="center" style="text-align:center; padding:40px">
-                    <a href="{{ env('CRM_CLIENT_HOST') }}/login" class="logo">
+                    <a href="https://app.rekonek.com/login" class="logo">
                         <img src="{{ URL::to('assets/images/logo.png') }}" style="width:150px; height:70px" alt="Rekonek" />
                     </a>
                 </td>
