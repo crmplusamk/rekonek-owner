@@ -18,23 +18,34 @@ class WebhookOtpController extends Controller
 
     public function handle(Request $request, $session, $userId)
     {
-        $this->response = array($request->all())[0];
+        $payload = $request->all();
+        $this->response = isset($payload[0]) && is_array($payload[0]) ? $payload[0] : $payload;
         $this->session = $session;
         $this->user = DB::table('users')->find($userId);
+        Log::channel('whatsapp')->info('WebhookOtp received', [
+            'session' => $this->session,
+            'user_id' => $userId,
+            'event' => data_get($this->response, 'event'),
+            'status' => data_get($this->response, 'payload.status'),
+        ]);
 
-        $this->connectionUpdate();
+        $this->sessionStatusUpdate();
         $this->connectionOpen();
         $this->connectionClose();
-        $this->connectionLoss();
+
+        return response()->json(['status' => 'ok'], 200);
     }
 
-    private function connectionUpdate()
+    private function sessionStatusUpdate()
     {
         try {
-
-            if (isset($this->response['event']) && $this->response['event'] == 'qrcode.updated') {
-
-                $base64QrCode = $this->response['data']['qrcode']['base64'];
+            $isWahaStatus = isset($this->response['event']) && $this->response['event'] === 'session.status';
+            $wahaStatus = strtoupper((string) data_get($this->response, 'payload.status', ''));
+            $wahaQr = (string) data_get($this->response, 'payload.qr', '');
+            if ($isWahaStatus && in_array($wahaStatus, ['SCAN_QR', 'SCAN_QR_CODE'], true) && $wahaQr !== '') {
+                $base64QrCode = str_starts_with($wahaQr, 'data:')
+                    ? $wahaQr
+                    : 'data:image/png;base64,'.$wahaQr;
                 $data = (object) [
                     'uuid' => Str::uuid(),
                     'context' => 'whatsapp-otp',
@@ -46,7 +57,7 @@ class WebhookOtpController extends Controller
                     'data' => $base64QrCode,
                 ];
 
-                NotificationSender::send($data)->toPrivate(true, false, $this->user);
+                $this->notifyPrivate($data);
             }
 
         } catch (\Throwable $th) {
@@ -62,14 +73,17 @@ class WebhookOtpController extends Controller
     private function connectionOpen()
     {
         try {
+            $isWahaStatus = isset($this->response['event']) && $this->response['event'] === 'session.status';
+            $wahaStatus = strtoupper((string) data_get($this->response, 'payload.status', ''));
+            if ($isWahaStatus && in_array($wahaStatus, ['WORKING', 'CONNECTED'], true)) {
+                $scannedNumber = (string) data_get($this->response, 'me.id', data_get($this->response, 'payload.me.id', ''));
+                if ($scannedNumber !== '' && str_contains($scannedNumber, '@')) {
+                    $scannedNumber = explode('@', $scannedNumber)[0];
+                }
 
-            $param = isset($this->response['event']) && $this->response['event'] == 'connection.update';
-            if ($param && $this->response['data']['state'] == "open") {
-
-                $scannedNumber = explode('@', $this->response['data']['wuid'])[0];
                 $session = WhatsappOtpSession::where('session', $this->session)->update([
                     'status' => 1,
-                    'number' => $scannedNumber
+                    'number' => $scannedNumber !== '' ? $scannedNumber : null,
                 ]);
 
                 $data = (object) [
@@ -83,9 +97,8 @@ class WebhookOtpController extends Controller
                     'data' => $session,
                 ];
 
-                NotificationSender::send($data)->toPrivate(true, false, $this->user);
+                $this->notifyPrivate($data);
                 return true;
-
             }
 
         } catch (\Throwable $th) {
@@ -101,10 +114,9 @@ class WebhookOtpController extends Controller
     private function connectionClose()
     {
         try {
-
-            $param = isset($this->response['event']) && $this->response['event'] == 'connection.update';
-            if ($param && $this->response['data']['state'] == "close") {
-
+            $isWahaStatus = isset($this->response['event']) && $this->response['event'] === 'session.status';
+            $wahaStatus = strtoupper((string) data_get($this->response, 'payload.status', ''));
+            if ($isWahaStatus && in_array($wahaStatus, ['FAILED', 'STOPPED', 'CLOSED'], true)) {
                 $session = WhatsappOtpSession::where('session', $this->session)->delete();
 
                 $data = (object) [
@@ -118,9 +130,8 @@ class WebhookOtpController extends Controller
                     'data' => $session,
                 ];
 
-                NotificationSender::send($data)->toPrivate(true, false, $this->user);
+                $this->notifyPrivate($data);
                 return true;
-
             }
 
         } catch (\Throwable $th) {
@@ -133,36 +144,17 @@ class WebhookOtpController extends Controller
         }
     }
 
-    private function connectionLoss()
+    private function notifyPrivate(object $data): void
     {
         try {
-
-            if (isset($this->response['event']) && ($this->response['event'] == 'logout.instance' || $this->response['event'] == 'remove.instance')) {
-
-                $session = WhatsappOtpSession::where('session', $this->session)->delete();
-
-                $data = (object) [
-                    'uuid' => Str::uuid(),
-                    'context' => 'whatsapp-otp',
-                    'title' => 'Close',
-                    'process' => 'whatsapp-close',
-                    'status' => 'success',
-                    'notify' => true,
-                    'message' => "Whatsapp, Terputus",
-                    'data' => $session,
-                ];
-
-                NotificationSender::send($data)->toPrivate(true, false, $this->user);
-                return true;
+            if (! $this->user) {
+                return;
             }
-
+            NotificationSender::send($data)->toPrivate(true, false, $this->user);
         } catch (\Throwable $th) {
-
-            Log::channel('whatsapp')->error('Error function connectionLoss', [
-                'message' => $th->getMessage()
+            Log::channel('whatsapp')->error('Error function notifyPrivate', [
+                'message' => $th->getMessage(),
             ]);
-
-            return false;
         }
     }
 }

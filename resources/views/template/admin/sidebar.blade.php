@@ -63,6 +63,13 @@
             </a>
         </li>
 
+        <li class="nav-item {{ request()->segment(1) == 'announcement' ? 'active' : '' }}">
+            <a href="{{ route('announcement.index') }}" class="{{ request()->segment(1) == 'announcement' ? 'active' : '' }}">
+                <span class="link-title">Announcement</span>
+                <i class="mdi mdi-bullhorn link-icon" data-toggle="tooltip" data-placement="right" title="Announcement"></i>
+            </a>
+        </li>
+
         <li class="nav-item {{ request()->segment(1) == 'setting-affiliator' ? 'active' : '' }}">
             <a href="{{ route('setting-affiliator.index') }}" class="{{ request()->segment(1) == 'setting-affiliator' ? 'active' : '' }}">
                 <span class="link-title">Affiliator</span>

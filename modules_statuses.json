@@ -23,5 +23,6 @@
     "Voucher": true,
     "Affiliator": true,
     "SettingAffiliator": true,
-    "PromoCode": true
+    "PromoCode": true,
+    "Announcement": true
 }

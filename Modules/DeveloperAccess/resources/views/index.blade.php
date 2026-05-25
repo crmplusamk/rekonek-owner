@@ -35,6 +35,16 @@
                         </select>
                     </div>
                     <div class="col-md-7 mb-2 text-right">
+                        <div class="btn-group mr-2" role="group">
+                            <button class="btn btn-outline-grey btn-sm dropdown-toggle" type="button" id="btnBulkAction" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" disabled>
+                                Action
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <a class="dropdown-item text-danger" href="javascript:void(0)" id="btnBulkDelete">
+                                    <i class="mdi mdi-trash-can"></i> Hapus
+                                </a>
+                            </div>
+                        </div>
                         <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#createAccessModal">
                             <i class="mdi mdi-plus"></i> Buat Akses Developer
                         </button>
@@ -62,7 +72,7 @@
                         @foreach ($access as $data)
                             <tr>
                                 <td>
-                                    <input type="checkbox" name="id[]" value="{{ $data->id }}">
+                                    <input type="checkbox" class="check-item" name="ids[]" value="{{ $data->id }}">
                                 </td>
                                 <td> {{ $data->account_name }} </td>
                                 <td> {{ $data->account_email }} </td>
@@ -84,6 +94,9 @@
                                         <a class="dropdown-item edit" target="_blank" href="{{ env("CRM_CLIENT_HOST").'/login-developer?token='.$data->token_access }}">
                                             <i class="mdi mdi-share"></i> Open Akses
                                         </a>
+                                        <a class="dropdown-item text-danger pointer" data-toggle="modal" data-target="#destroy-{{ $data->id }}">
+                                            <i class="mdi mdi-delete"></i> Hapus
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
@@ -94,6 +107,34 @@
         </div>
     </div>
 </div>
+
+@foreach ($access as $data)
+    <div class="modal fade" id="destroy-{{ $data->id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-top" role="document">
+            <div class="modal-content">
+                <div class="modal-body modal-body-lg text-center text-wrap text-break">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <i class="mdi mdi-comment-question-outline text-primary" style="font-size: 50px"></i>
+                    <div class="text-center mt-4">
+                        <h5>Konfirmasi Hapus Akses</h5>
+                        <p class="mt-2 text-lg">Hapus akses developer untuk <strong>{{ $data->account_name }}</strong> ({{ $data->account_email }})?</p>
+                        <p class="text-danger">Token tidak bisa dipakai lagi setelah dihapus.</p>
+                    </div>
+                    <div class="modal-action mt-4 mb-3 d-flex justify-content-center align-items-center">
+                        <a data-dismiss="modal" class="btn btn-light mr-3">Batal</a>
+                        <form action="{{ route('developer-access.destroy') }}" method="post" class="d-inline">
+                            @csrf
+                            <input type="hidden" name="ids[]" value="{{ $data->id }}">
+                            <button type="submit" class="btn btn-danger">Hapus</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+@endforeach
 
 <!-- Create Access Modal -->
 <div class="modal fade" id="createAccessModal" tabindex="-1" role="dialog" aria-labelledby="createAccessModalLabel" aria-hidden="true">
@@ -161,6 +202,10 @@
         </div>
     </div>
 </div>
+
+<form id="bulkDeleteForm" action="{{ route('developer-access.destroy') }}" method="post" class="d-none">
+    @csrf
+</form>
 @endsection
 
 @push('script')
@@ -203,6 +248,36 @@
         });
 
         table.column(6).search('Active', true, false, false).draw();
+
+        function toggleBulkActionButton() {
+            $('#btnBulkAction').prop('disabled', $('.check-item:checked').length === 0);
+        }
+
+        $('#checkAll').on('change', function () {
+            $('.check-item').prop('checked', this.checked);
+            toggleBulkActionButton();
+        });
+
+        $(document).on('change', '.check-item', function () {
+            toggleBulkActionButton();
+            $('#checkAll').prop('checked', $('.check-item').length > 0 && $('.check-item:checked').length === $('.check-item').length);
+        });
+
+        $('#btnBulkDelete').on('click', function () {
+            var ids = $('.check-item:checked').map(function () { return $(this).val(); }).get();
+            if (ids.length === 0) {
+                return;
+            }
+            if (!confirm('Hapus ' + ids.length + ' akses developer yang dipilih? Token tidak bisa dipakai lagi.')) {
+                return;
+            }
+            var $form = $('#bulkDeleteForm');
+            $form.find('input[name="ids[]"]').remove();
+            ids.forEach(function (id) {
+                $form.append($('<input>', { type: 'hidden', name: 'ids[]', value: id }));
+            });
+            $form.trigger('submit');
+        });
 
         var $userSelect = $('#user_id');
         var $accessModal = $('#createAccessModal');

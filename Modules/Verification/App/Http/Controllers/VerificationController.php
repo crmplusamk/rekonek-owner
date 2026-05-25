@@ -32,6 +32,14 @@ class VerificationController extends Controller
         try {
 
             $session = WhatsappHelper::createSession();
+            if (! is_array($session) || empty($session['qrcode']['base64'])) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $session['message'] ?? 'Gagal membuat session whatsapp atau QR code tidak tersedia',
+                    'meta' => $session['meta'] ?? null,
+                ], 500);
+            }
+
             return response()->json([
 				'status'  => 'success',
 				'data' => $session
@@ -121,5 +129,37 @@ class VerificationController extends Controller
                 ]);
             })
             ->make();
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $session = WhatsappOtpSession::find($id);
+
+            if (! $session) {
+                notify()->warning('Data session tidak ditemukan atau sudah terhapus.');
+
+                return to_route('verification.index');
+            }
+
+            $disconnect = WhatsappHelper::disconnectSession((string) $session->session);
+            if (($disconnect['error'] ?? false) === true) {
+                logger()->warning('Verification destroy: WAHA disconnect failed but DB delete continues', [
+                    'session_id' => $session->id,
+                    'session_code' => $session->session,
+                    'disconnect' => $disconnect,
+                ]);
+            }
+
+            $session->delete();
+
+            notify()->success('Session whatsapp berhasil dihapus.');
+
+            return to_route('verification.index');
+        } catch (\Throwable $th) {
+            notify()->error('Terjadi kesalahan. '.$th->getMessage());
+
+            return to_route('verification.index');
+        }
     }
 }

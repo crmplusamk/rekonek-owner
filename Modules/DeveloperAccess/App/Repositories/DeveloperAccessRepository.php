@@ -143,15 +143,52 @@ class DeveloperAccessRepository
         }
     }
 
-    public function destroyBulkByToken($request)
+    /**
+     * Hapus akses developer di DB backoffice dan mirror di DB CRM (koneksi client).
+     *
+     * @param  array<int, string>  $ids
+     * @param  array<int, string>  $tokens
+     */
+    public function destroyBulk(array $ids = [], array $tokens = []): int
     {
-        $tokens = $request['tokens'] ?? [];
-        if ($tokens === [] || $tokens === null) {
+        $ids = array_values(array_filter($ids));
+        $tokens = array_values(array_filter($tokens));
+
+        if ($ids === [] && $tokens === []) {
             return 0;
         }
 
-        DB::connection('client')->table('setting_developer_access')->whereIn('token_access', $tokens)->delete();
+        $rows = DeveloperAccess::query()
+            ->where(function ($query) use ($ids, $tokens) {
+                if ($ids !== []) {
+                    $query->whereIn('id', $ids);
+                }
+                if ($tokens !== []) {
+                    $ids !== []
+                        ? $query->orWhereIn('token_access', $tokens)
+                        : $query->whereIn('token_access', $tokens);
+                }
+            })
+            ->get();
 
-        return DeveloperAccess::whereIn('token_access', $tokens)->delete();
+        if ($rows->isEmpty()) {
+            return 0;
+        }
+
+        $resolvedIds = $rows->pluck('id')->unique()->values()->all();
+
+        DB::connection('client')
+            ->table('setting_developer_access')
+            ->whereIn('id', $resolvedIds)
+            ->delete();
+
+        return DeveloperAccess::whereIn('id', $resolvedIds)->delete();
+    }
+
+    public function destroyBulkByToken($request)
+    {
+        $tokens = $request['tokens'] ?? [];
+
+        return $this->destroyBulk(tokens: is_array($tokens) ? $tokens : []);
     }
 }
