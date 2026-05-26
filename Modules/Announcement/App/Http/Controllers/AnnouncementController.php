@@ -146,7 +146,8 @@ class AnnouncementController extends Controller
     {
         try {
             $announcement = $this->announcementRepo->getById($id);
-            $announcement->delete();
+            $announcement->targets()->delete();
+            $announcement->forceDelete();
 
             notify()->success('Berhasil menghapus pengumuman');
 
