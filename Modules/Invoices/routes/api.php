@@ -18,5 +18,6 @@ use Modules\Invoices\App\Http\Controllers\InvoiceApiController;
 Route::prefix('v1')->name('api.')->group(function ()
 {
     Route::get('invoices', [InvoiceApiController::class, 'index'])->name('invoice.index');
+    Route::get('invoices/count-unpaid', [InvoiceApiController::class, 'countUnpaid'])->name('invoice.count-unpaid');
     Route::get('invoice/{id}/show', [InvoiceApiController::class, 'show'])->name('invoice.show');
 });
