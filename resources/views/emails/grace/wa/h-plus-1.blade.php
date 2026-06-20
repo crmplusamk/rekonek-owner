@@ -2,7 +2,7 @@ Halo {{ $name ?? 'Customer' }},
 
 Akses pengiriman pesan dijeda. Data Anda masuk masa aman (30 hari). Klik untuk aktivasi kembali agar dashboard aktif lagi.
 
-https://app.rekonek.com/login?redirect=%2Fcrm%2Fbilling%2Fsubscription
+https://app.rekonek.com/login?redirect=%2Fbilling%2Fpackage
 
 Salam hangat,
 Tim Rekonek
