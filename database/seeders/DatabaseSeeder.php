@@ -5,7 +5,6 @@ namespace Database\Seeders;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Modules\Contact\Database\Seeders\ContactDatabaseSeeder;
-use Modules\Feature\Database\Seeders\AiCreditsCatalogSeeder;
 use Modules\Feature\Database\Seeders\FeatureDatabaseSeeder;
 use Modules\Package\Database\Seeders\PackageDatabaseSeeder;
 use Modules\Package\Database\Seeders\PackageFeatureDatabaseSeeder;
@@ -24,7 +23,6 @@ class DatabaseSeeder extends Seeder
             FeatureDatabaseSeeder::class,
             PackageDatabaseSeeder::class,
             PackageFeatureDatabaseSeeder::class,
-            AiCreditsCatalogSeeder::class,
             ContactDatabaseSeeder::class,
             // PackageFeatureSeeder::class,
             // AddonSeeder::class,
