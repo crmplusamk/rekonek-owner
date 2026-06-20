@@ -29,7 +29,7 @@
                             Hari ini layanan sesuai paket tersebut tidak lagi aktif. Silakan perpanjang atau pilih paket lain agar Anda dapat terus menggunakan Rekonek tanpa gangguan.
                         </div>
                         <div style="padding-bottom: 40px; text-align:center;">
-                            <a href="https://app.rekonek.com/login?redirect=%2Fcrm%2Fbilling%2Fsubscription"
+                            <a href="https://app.rekonek.com/login?redirect=%2Fbilling%2Fpackage"
                                 rel="noopener"
                                 style="text-decoration:none;display:inline-block;text-align:center;padding:0.75575rem 1.3rem;font-size:0.925rem;line-height:1.5;border-radius:0.35rem;color:#ffffff;background-color:#2465FF;border:0px;margin-right:0.75rem!important;font-weight:600!important;outline:none!important;vertical-align:middle"
                                 target="_blank">
@@ -41,10 +41,10 @@
                             <p style="margin-bottom: 10px;">
                                 Tombol tidak berfungsi? Coba copy paste link berikut pada browser Anda:
                             </p>
-                            <a href="https://app.rekonek.com/login?redirect=%2Fcrm%2Fbilling%2Fsubscription"
+                            <a href="https://app.rekonek.com/login?redirect=%2Fbilling%2Fpackage"
                                 rel="noopener" target="_blank"
                                 style="text-decoration:none;color: #009EF7">
-                                https://app.rekonek.com/login?redirect=%2Fcrm%2Fbilling%2Fsubscription
+                                https://app.rekonek.com/login?redirect=%2Fbilling%2Fpackage
                             </a>
                         </div>
                         <div style="padding-bottom: 10px">
