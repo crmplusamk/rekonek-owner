@@ -7,7 +7,7 @@
 </style>
 
 @php
-    $actionUrl = $actionUrl ?? 'https://app.rekonek.com' . '/login?redirect=%2Fcrm%2Fbilling%2Fsubscription';
+    $actionUrl = $actionUrl ?? 'https://app.rekonek.com' . '/login?redirect=%2Fbilling%2Fpackage';
     $actionText = $actionText ?? 'Aktifkan Kembali';
 @endphp
 
