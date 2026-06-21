@@ -95,7 +95,7 @@ class InvoiceRepository
     {
         $data = Invoice::where("company_id", $request['company_id'])
             ->with('items.itemable', 'payments')
-            ->orderBy("created_at", "desc")
+            ->orderBy("date", "desc")
             ->get();
 
         return $data;
@@ -147,6 +147,13 @@ class InvoiceRepository
             ->first();
 
         return $data;
+    }
+
+    function countUnpaidByCompanyId($companyId)
+    {
+        return Invoice::where("company_id", $companyId)
+            ->where("is_paid", 0)
+            ->count();
     }
 
     function update($invoice, $data)

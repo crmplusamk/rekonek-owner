@@ -1,0 +1,11 @@
+{
+    "name": "AiCreditUsage",
+    "alias": "aicreditusage",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\AiCreditUsage\\App\\Providers\\AiCreditUsageServiceProvider"
+    ],
+    "files": []
+}

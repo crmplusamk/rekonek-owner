@@ -62,4 +62,25 @@ class InvoiceApiController extends Controller
             ], 500);
         }
     }
+
+    public function countUnpaid(Request $request)
+    {
+        try {
+
+            $count = $this->invoiceRepo->countUnpaidByCompanyId($request->company_id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ok',
+                'data' => $count
+            ], 200);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
