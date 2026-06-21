@@ -1,0 +1,31 @@
+{
+    "name": "nwidart/aicreditusage",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\AiCreditUsage\\": "",
+            "Modules\\AiCreditUsage\\App\\": "app/",
+            "Modules\\AiCreditUsage\\Database\\Factories\\": "database/factories/",
+            "Modules\\AiCreditUsage\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\AiCreditUsage\\Tests\\": "tests/"
+        }
+    }
+}
