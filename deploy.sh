@@ -6,6 +6,7 @@ export NVM_DIR="$HOME/.nvm"
 
 nvm use 20
 
+composer config audit.block-insecure false
 rm composer.lock
 composer install --no-dev --optimize-autoloader
 
