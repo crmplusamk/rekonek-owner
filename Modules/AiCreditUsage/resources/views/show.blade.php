@@ -76,6 +76,66 @@
         </div>
     </div>
 
+    {{-- Kelola saldo credit AI (admin owner): reset + penyesuaian manual --}}
+    <div class="col-12 mb-3">
+        <div class="border-1">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                <span class="stat-lbl mb-0">Kelola Saldo Credit AI</span>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-toggle="modal" data-target="#resetCreditModal">
+                    <i class="mdi mdi-restore mr-1"></i> Reset Credit
+                </button>
+            </div>
+            <div class="p-3">
+                <form method="POST" action="{{ route('ai-credit-usage.company.adjust', ['company' => $companyId]) }}"
+                      class="form-row align-items-end"
+                      onsubmit="return confirm('Yakin menyesuaikan credit AI organisasi ini?');">
+                    @csrf
+                    <div class="form-group col-md-3 mb-2">
+                        <label class="stat-lbl">Aksi</label>
+                        <select name="direction" class="form-control">
+                            <option value="grant">Tambah (grant)</option>
+                            <option value="deduct">Kurangi (deduct)</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-3 mb-2">
+                        <label class="stat-lbl">Jumlah credit</label>
+                        <input type="number" name="amount" min="1" step="1" class="form-control" required placeholder="mis. 1000">
+                    </div>
+                    <div class="form-group col-md-4 mb-2">
+                        <label class="stat-lbl">Alasan (opsional)</label>
+                        <input type="text" name="reason" maxlength="500" class="form-control" placeholder="mis. kompensasi gangguan">
+                    </div>
+                    <div class="form-group col-md-2 mb-2">
+                        <button type="submit" class="btn btn-primary btn-block"><i class="mdi mdi-check mr-1"></i> Terapkan</button>
+                    </div>
+                </form>
+                <small class="text-muted">Reset & penyesuaian tidak menghapus history — tiap aksi dicatat sebagai entri audit (siapa &amp; alasan).</small>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal konfirmasi reset --}}
+    <div class="modal fade" id="resetCreditModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reset AI Credit</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Reset akan mengembalikan pemakaian credit AI organisasi <b>{{ $companyName }}</b> pada cycle berjalan ke <b>0</b> (sisa kembali penuh). History pemakaian tetap tersimpan; reset dicatat sebagai entri audit.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Batal</button>
+                    <form method="POST" action="{{ route('ai-credit-usage.company.reset', ['company' => $companyId]) }}" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-danger"><i class="mdi mdi-restore mr-1"></i> Ya, Reset</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Trend chart + feature breakdown --}}
     <div class="col-md-8 mb-3">
         <div class="border-1 h-100">

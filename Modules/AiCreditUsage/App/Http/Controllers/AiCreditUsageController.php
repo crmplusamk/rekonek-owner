@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Modules\AiCreditUsage\App\Repositories\AiCreditUsageReportRepository;
 
 class AiCreditUsageController extends Controller
@@ -96,6 +97,65 @@ class AiCreditUsageController extends Controller
         return datatables()->query($query)
             ->orderColumn('total_tokens', '(COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)) $1')
             ->make(true);
+    }
+
+    /**
+     * Reset AI credit organisasi: kembalikan pemakaian cycle berjalan ke 0 dengan menulis satu
+     * entri offset (history pemakaian tetap utuh; reset tercatat sebagai audit). Pool AICRD sama.
+     */
+    public function reset(Request $request, string $company)
+    {
+        [$start, $end] = $this->reportRepo->currentCycleWindow($company);
+        $used = $this->reportRepo->cycleCreditsUsed($company, $start, $end);
+
+        if ($used === 0) {
+            notify()->info('Tidak ada credit terpakai pada cycle berjalan — tidak ada yang perlu direset.');
+
+            return back();
+        }
+
+        $this->reportRepo->recordAdjustment(
+            $company,
+            -$used, // offset → SUM cycle = 0 → sisa penuh
+            'admin_reset',
+            'Reset AI credit oleh admin owner.',
+            optional(Auth::user())->email ?? 'owner-admin'
+        );
+
+        notify()->success("AI credit organisasi direset. {$used} credit terpakai dikompensasi (history tetap tersimpan).");
+
+        return back();
+    }
+
+    /**
+     * Penyesuaian manual: grant (tambah sisa) atau deduct (kurangi sisa) sejumlah credit, dengan
+     * alasan. Ditulis sebagai entri audit di ai_credit_usages.
+     */
+    public function adjust(Request $request, string $company)
+    {
+        $validated = $request->validate([
+            'amount' => ['required', 'integer', 'min:1', 'max:10000000'],
+            'direction' => ['required', 'in:grant,deduct'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        // grant = menambah sisa = mengurangi usage (negatif); deduct = menambah usage (positif).
+        $signed = $validated['direction'] === 'grant'
+            ? -$validated['amount']
+            : $validated['amount'];
+
+        $this->reportRepo->recordAdjustment(
+            $company,
+            $signed,
+            'admin_adjustment',
+            $validated['reason'] ?: ($validated['direction'] === 'grant' ? 'Grant credit manual.' : 'Deduct credit manual.'),
+            optional(Auth::user())->email ?? 'owner-admin'
+        );
+
+        $verb = $validated['direction'] === 'grant' ? 'ditambah' : 'dikurangi';
+        notify()->success("AI credit organisasi {$verb} {$validated['amount']} credit.");
+
+        return back();
     }
 
     /**
