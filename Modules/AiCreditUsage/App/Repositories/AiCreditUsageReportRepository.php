@@ -2,10 +2,12 @@
 
 namespace Modules\AiCreditUsage\App\Repositories;
 
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Read-only reporting layer over the main rekonek app's `ai_credit_usages` table
@@ -182,5 +184,71 @@ class AiCreditUsageReportRepository
             ->table('companies')
             ->where('id', $companyId)
             ->value('name');
+    }
+
+    /**
+     * Window cycle berjalan organisasi dari subscription_packages owner (default connection),
+     * selaras dengan yang dipakai rekonek (subscription start..end). [null, null] bila tak ada.
+     *
+     * @return array{0: CarbonInterface|null, 1: CarbonInterface|null}
+     */
+    public function currentCycleWindow(string $companyId): array
+    {
+        $row = DB::table('subscription_packages')
+            ->where('company_id', $companyId)
+            ->orderByDesc('expired_at')
+            ->first(['started_at', 'expired_at']);
+
+        if (! $row) {
+            return [null, null];
+        }
+
+        return [
+            $row->started_at ? Carbon::parse($row->started_at) : null,
+            $row->expired_at ? Carbon::parse($row->expired_at) : null,
+        ];
+    }
+
+    /**
+     * Total credit terpakai (net, termasuk adjustment) pada window cycle. Dipakai untuk
+     * menghitung offset reset. Window null → jumlahkan seluruh baris company.
+     */
+    public function cycleCreditsUsed(string $companyId, ?CarbonInterface $start, ?CarbonInterface $end): int
+    {
+        return (int) DB::connection(self::CONNECTION)
+            ->table(self::TABLE)
+            ->where('company_id', $companyId)
+            ->when($start, fn ($q) => $q->where('created_at', '>=', $start))
+            ->when($end, fn ($q) => $q->where('created_at', '<=', $end))
+            ->sum('credits_used');
+    }
+
+    /**
+     * Tulis SATU baris penyesuaian credit ke rekonek (history aman; audit). `credits_used`
+     * positif = konsumsi (kurangi sisa), negatif = menambah sisa. Idempotency tidak diperlukan
+     * (tiap aksi admin = entri audit baru) — reference_id uuid unik memenuhi constraint.
+     */
+    public function recordAdjustment(
+        string $companyId,
+        int $signedCredits,
+        string $type,
+        ?string $note,
+        ?string $actor
+    ): void {
+        DB::connection(self::CONNECTION)->table(self::TABLE)->insert([
+            'id' => (string) Str::uuid(),
+            'company_id' => $companyId,
+            'feature' => $type,
+            'reference_type' => $type,
+            'reference_id' => (string) Str::uuid(),
+            'request_id' => null,
+            'input_tokens' => 0,
+            'output_tokens' => 0,
+            'credits_used' => $signedCredits,
+            'note' => $note,
+            'actor' => $actor,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }
