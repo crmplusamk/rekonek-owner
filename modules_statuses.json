@@ -24,5 +24,6 @@
     "Affiliator": true,
     "SettingAffiliator": true,
     "PromoCode": true,
-    "Announcement": true
+    "Announcement": true,
+    "AiCreditUsage": true
 }

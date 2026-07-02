@@ -56,6 +56,13 @@
             </a>
         </li>
 
+        <li class="nav-item {{ request()->segment(1) == 'ai-credit-usage' ? 'active' : '' }}">
+            <a href="{{ route('ai-credit-usage.index') }}" class="{{ request()->segment(1) == 'ai-credit-usage' ? 'active' : '' }}">
+                <span class="link-title">Laporan AI Credit</span>
+                <i class="mdi mdi-robot link-icon" data-toggle="tooltip" data-placement="right" title="Laporan AI Credit"></i>
+            </a>
+        </li>
+
         <li class="nav-item {{ request()->segment(1) == 'promo-code' ? 'active' : '' }}">
             <a href="{{ route('promo-code.index') }}" class="{{ request()->segment(1) == 'promo-code' ? 'active' : '' }}">
                 <span class="link-title">Promo Code</span>

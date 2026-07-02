@@ -1,0 +1,344 @@
+@extends('template.admin.main')
+
+@push('head')
+<style>
+.stat-lbl {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #6c757d;
+    margin-bottom: 8px;
+}
+</style>
+@endpush
+
+@section('content')
+<div class="row">
+
+    {{-- Page header --}}
+    <div class="col-12 mt-2 mb-3">
+        <div class="d-flex justify-content-between align-items-end flex-wrap">
+            <div class="mb-2">
+                <h4 class="mb-1 font-weight-bold">Laporan AI Credit</h4>
+                <small class="text-muted">Pemakaian token &amp; credit AI di seluruh organisasi</small>
+            </div>
+            <div class="mb-2" style="min-width: 260px;">
+                <span class="stat-lbl">Periode</span>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="mdi mdi-calendar-range"></i></span>
+                    </div>
+                    <input type="text" id="dateRange" class="form-control" readonly>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Summary cards --}}
+    <div class="col-12 mb-3">
+        <div class="row">
+            {{-- Credit: primary metric, visually prominent --}}
+            <div class="col-md-4 col-sm-6 mb-3">
+                <div class="card h-100" style="border-left: 3px solid #2465FF;">
+                    <div class="card-body">
+                        <span class="stat-lbl">Total Credit Terpakai</span>
+                        <div class="number-stats font-weight-bold text-dark" id="card-total-credits">0</div>
+                    </div>
+                </div>
+            </div>
+            {{-- Token with input/output ratio bar --}}
+            <div class="col-md-4 col-sm-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <span class="stat-lbl">Total Token</span>
+                        <h3 class="mb-2" id="card-total-tokens">0</h3>
+                        <div class="progress mb-1" style="height: 5px;" title="Biru = input, Abu = output">
+                            <div class="progress-bar bg-primary" id="token-bar-in" style="width:50%"></div>
+                            <div class="progress-bar bg-secondary" id="token-bar-out" style="width:50%"></div>
+                        </div>
+                        <small class="text-muted">
+                            In: <span id="card-input-tokens">0</span> &middot; Out: <span id="card-output-tokens">0</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {{-- Secondary metrics --}}
+            <div class="col-md-2 col-sm-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <span class="stat-lbl">Response AI</span>
+                        <h3 class="mb-0" id="card-event-count">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 col-sm-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <span class="stat-lbl">Org Aktif</span>
+                        <h3 class="mb-0" id="card-active-companies">0</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Trend chart + feature breakdown --}}
+    <div class="col-md-8 mb-3">
+        <div class="border-1 h-100">
+            <div class="p-3 border-bottom">
+                <span class="stat-lbl mb-0">Tren Harian — Credit</span>
+            </div>
+            <div class="p-3">
+                <canvas id="aiUsageTrendChart" height="110"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="border-1 h-100">
+            <div class="p-3 border-bottom">
+                <span class="stat-lbl mb-0">Berdasarkan Fitur</span>
+            </div>
+            <div class="p-3">
+                <div id="feature-breakdown">
+                    <p class="text-muted small mb-0">Tidak ada data.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Per-org table --}}
+    <div class="col-12">
+        <div class="border-1">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center flex-wrap" style="gap: 8px;">
+                <span class="stat-lbl mb-0">Per Organisasi</span>
+                <input type="text" id="search" class="form-control form-control-sm" style="max-width: 240px;" placeholder="Cari organisasi…">
+            </div>
+            <div class="table-responsive">
+                <table class="table ai-usage-table" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Organisasi</th>
+                            <th class="text-right">Response</th>
+                            <th class="text-right">Input Token</th>
+                            <th class="text-right">Output Token</th>
+                            <th class="text-right">Total Token</th>
+                            <th class="text-right">Credit</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+@endsection
+
+@push('script')
+<script>
+
+    let aiUsageTable;
+    let trendChart = null;
+    let search = '';
+    let currentStart = moment().subtract(29, 'days').format('YYYY-MM-DD');
+    let currentEnd = moment().format('YYYY-MM-DD');
+
+    const FEATURE_LABELS = {
+        chat_auto_reply: 'Auto-Reply Chat',
+        agent_testing_sandbox: 'Live Testing',
+    };
+
+    const SHOW_URL_TEMPLATE = "{{ route('ai-credit-usage.show', ['company' => '__CID__']) }}";
+
+    function companyLink(data, type, row) {
+        if (type !== 'display') return data;
+        const url = SHOW_URL_TEMPLATE.replace('__CID__', encodeURIComponent(row.company_id));
+        const a = document.createElement('a');
+        a.href = url;
+        a.textContent = data;
+        return a.outerHTML;
+    }
+
+    function fmt(n) {
+        return Number(n || 0).toLocaleString('id-ID');
+    }
+
+    function animateCount(el, target, duration) {
+        if (!el) return;
+        const end = Number(target) || 0;
+        if (!end) { el.textContent = '0'; return; }
+        let current = 0;
+        const frames = Math.max(1, Math.round(duration / 16));
+        const step = end / frames;
+        let f = 0;
+        const timer = setInterval(function () {
+            f++;
+            current = Math.min(current + step, end);
+            el.textContent = Math.round(current).toLocaleString('id-ID');
+            if (f >= frames) { el.textContent = Math.round(end).toLocaleString('id-ID'); clearInterval(timer); }
+        }, 16);
+    }
+
+    function updateTokenBar(inp, out) {
+        const total = inp + out;
+        const inPct  = total ? Math.max(5, inp / total * 100) : 50;
+        const outPct = total ? Math.max(5, out / total * 100) : 50;
+        document.getElementById('token-bar-in').style.width  = inPct.toFixed(1) + '%';
+        document.getElementById('token-bar-out').style.width = outPct.toFixed(1) + '%';
+    }
+
+    $(document).ready(function () {
+        initDateRange();
+        initTable();
+        loadSummary();
+    });
+
+    function initDateRange() {
+        $('#dateRange').daterangepicker({
+            startDate: moment(currentStart),
+            endDate: moment(currentEnd),
+            maxDate: moment(),
+            locale: {
+                format: 'DD MMM YYYY',
+                separator: ' - ',
+                applyLabel: 'Terapkan',
+                cancelLabel: 'Batal',
+                customRangeLabel: 'Kustom',
+                daysOfWeek: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
+                monthNames: ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
+                firstDay: 1,
+            },
+            ranges: {
+                'Hari Ini': [moment(), moment()],
+                '7 Hari Terakhir': [moment().subtract(6, 'days'), moment()],
+                '30 Hari Terakhir': [moment().subtract(29, 'days'), moment()],
+                'Bulan Ini': [moment().startOf('month'), moment()],
+                'Bulan Lalu': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
+            },
+        }, function (start, end) {
+            currentStart = start.format('YYYY-MM-DD');
+            currentEnd = end.format('YYYY-MM-DD');
+            refresh();
+        });
+    }
+
+    function initTable() {
+        aiUsageTable = $('.ai-usage-table').DataTable({
+            destroy: true,
+            paging: true,
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: "{{ route('ai-credit-usage.table') }}",
+                dataType: 'json',
+                data: function (d) {
+                    d.search = search;
+                    d.start_date = currentStart;
+                    d.end_date = currentEnd;
+                },
+            },
+            columns: [
+                { data: 'company_name', render: companyLink },
+                { data: 'event_count', className: 'text-right', render: fmt },
+                { data: 'input_tokens', className: 'text-right', render: fmt },
+                { data: 'output_tokens', className: 'text-right', render: fmt },
+                { data: 'total_tokens', className: 'text-right', render: fmt },
+                { data: 'credits_used', className: 'text-right', render: fmt },
+            ],
+            order: [[5, 'desc']],
+            dom: 'lrtip',
+            length: 10,
+            lengthChange: false,
+        });
+    }
+
+    $('#search').on('keyup', debounce(function () {
+        search = this.value;
+        aiUsageTable.ajax.reload();
+    }, 500));
+
+    function refresh() {
+        loadSummary();
+        if (aiUsageTable) aiUsageTable.ajax.reload();
+    }
+
+    function loadSummary() {
+        $.ajax({
+            url: "{{ route('ai-credit-usage.summary') }}",
+            data: { start_date: currentStart, end_date: currentEnd },
+            dataType: 'json',
+            success: function (res) {
+                const s = res.summary || {};
+                const inp = Number(s.total_input_tokens) || 0;
+                const out = Number(s.total_output_tokens) || 0;
+                animateCount(document.getElementById('card-total-credits'), s.total_credits, 700);
+                animateCount(document.getElementById('card-total-tokens'), s.total_tokens, 500);
+                animateCount(document.getElementById('card-input-tokens'), inp, 500);
+                animateCount(document.getElementById('card-output-tokens'), out, 500);
+                animateCount(document.getElementById('card-event-count'), s.event_count, 450);
+                animateCount(document.getElementById('card-active-companies'), s.active_companies, 400);
+                updateTokenBar(inp, out);
+                renderFeatures(res.features || []);
+                renderTrend(res.trend || []);
+            },
+        });
+    }
+
+    function renderFeatures(features) {
+        if (!features.length) {
+            $('#feature-breakdown').html('<p class="text-muted small mb-0">Tidak ada data.</p>');
+            return;
+        }
+        let html = '<table class="table table-sm mb-0"><tbody>';
+        features.forEach(function (f) {
+            const label = FEATURE_LABELS[f.feature] || f.feature;
+            html += '<tr>'
+                + '<td class="border-0 pb-0">' + label + '</td>'
+                + '<td class="border-0 pb-0 text-right font-weight-bold text-primary">' + fmt(f.total_credits) + ' cr</td>'
+                + '</tr>'
+                + '<tr><td colspan="2" class="text-muted small pt-0">'
+                + fmt(f.event_count) + ' response &middot; ' + fmt(f.total_tokens) + ' token</td></tr>';
+        });
+        html += '</tbody></table>';
+        $('#feature-breakdown').html(html);
+    }
+
+    function renderTrend(trend) {
+        const labels  = trend.map(function (t) { return t.date; });
+        const credits = trend.map(function (t) { return t.credits; });
+
+        if (trendChart) {
+            trendChart.data.labels = labels;
+            trendChart.data.datasets[0].data = credits;
+            trendChart.update();
+            return;
+        }
+
+        const ctx = document.getElementById('aiUsageTrendChart').getContext('2d');
+        trendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Credit',
+                    data: credits,
+                    borderColor: '#2465FF',
+                    backgroundColor: 'rgba(36,101,255,0.07)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 2,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+            },
+        });
+    }
+
+</script>
+@endpush

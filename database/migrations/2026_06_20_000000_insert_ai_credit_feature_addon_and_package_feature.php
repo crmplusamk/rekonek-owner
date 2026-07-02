@@ -66,7 +66,7 @@ return new class extends Migration
                 'id' => (string) Str::uuid(),
                 'feature_id' => $featureId,
                 'name' => 'AI Credit',
-                'description' => 'Tambahan credit AI untuk auto-reply. 1 unit = 1000 credit.',
+                'description' => 'Tambahan credit AI.',
                 'quantity' => 1,
                 'charge' => 1000,
                 'price' => 99000,
