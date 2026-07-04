@@ -614,6 +614,10 @@ class CheckoutApiController extends Controller
                 'note' => "Langganan {$dataSubsPackage->package->name} (gratis / diskon 100%)",
                 'company_id' => $invoice->company_id
             ]);
+
+            // Prepaid AI Credit: perpanjang expired_at addon aktif ke cycle baru agar saldo
+            // carry-over saat perpanjangan (lihat SubscriptionService::extendAiCreditAddonExpiry).
+            $this->subscriptionSrv->extendAiCreditAddonExpiry($invoice->company_id, $dataSubsPackage->expired_at);
         }
 
         foreach ($subsAddons as $subsAddon) {
@@ -815,6 +819,10 @@ class CheckoutApiController extends Controller
                 'note' => "Memperbaharui status langganan ke {$dataSubsPackage->package->name}",
                 'company_id' => $invoice->company_id
             ]);
+
+            // Prepaid AI Credit: perpanjang expired_at addon aktif ke cycle baru agar saldo
+            // carry-over saat perpanjangan (lihat SubscriptionService::extendAiCreditAddonExpiry).
+            $this->subscriptionSrv->extendAiCreditAddonExpiry($invoice->company_id, $dataSubsPackage->expired_at);
         }
 
         /** create/update addon subscription */

@@ -23,7 +23,7 @@ class AddonApiController extends Controller
     {
         try {
 
-            $addons = Addon::where('is_active', true)->get();
+            $addons = Addon::with('feature')->where('is_active', true)->get();
             $addons = AddonListResource::collection($addons);
 
             return response()->json([

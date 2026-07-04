@@ -215,12 +215,14 @@ class AiCreditUsageReportRepository
      */
     public function cycleCreditsUsed(string $companyId, ?CarbonInterface $start, ?CarbonInterface $end): int
     {
+        // Reset menyasar pool CYCLE (saldo addon prepaid dibiarkan — sudah dibayar). Selaras dengan
+        // rekonek yang kini menjumlah `cycle_credits_used` untuk gating cycle.
         return (int) DB::connection(self::CONNECTION)
             ->table(self::TABLE)
             ->where('company_id', $companyId)
             ->when($start, fn ($q) => $q->where('created_at', '>=', $start))
             ->when($end, fn ($q) => $q->where('created_at', '<=', $end))
-            ->sum('credits_used');
+            ->sum('cycle_credits_used');
     }
 
     /**
@@ -245,6 +247,10 @@ class AiCreditUsageReportRepository
             'input_tokens' => 0,
             'output_tokens' => 0,
             'credits_used' => $signedCredits,
+            // Penyesuaian admin menyasar pool CYCLE agar terhitung oleh rekonek (usedThisCycle
+            // menjumlah cycle_credits_used). Saldo addon prepaid tak disentuh.
+            'cycle_credits_used' => $signedCredits,
+            'addon_credits_used' => 0,
             'note' => $note,
             'actor' => $actor,
             'created_at' => now(),
