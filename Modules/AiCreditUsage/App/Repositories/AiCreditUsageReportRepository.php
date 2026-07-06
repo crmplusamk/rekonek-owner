@@ -168,6 +168,7 @@ class AiCreditUsageReportRepository
                 id,
                 created_at,
                 feature,
+                status_flag,
                 COALESCE(input_tokens, 0) AS input_tokens,
                 COALESCE(output_tokens, 0) AS output_tokens,
                 (COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)) AS total_tokens,

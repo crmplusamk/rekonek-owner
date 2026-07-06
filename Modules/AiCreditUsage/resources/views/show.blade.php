@@ -172,6 +172,7 @@
                         <tr>
                             <th>Waktu</th>
                             <th>Fitur</th>
+                            <th>Status</th>
                             <th class="text-right">Input Token</th>
                             <th class="text-right">Output Token</th>
                             <th class="text-right">Total Token</th>
@@ -206,6 +207,18 @@
 
     function featureLabel(value) {
         return FEATURE_LABELS[value] || value || '-';
+    }
+
+    // Balasan yang dibuang sebelum terkirim (kontak mengirim pesan baru saat AI memproses):
+    // dicatat untuk transparansi token, tetapi tidak ditagih (Credit 0).
+    const STATUS_FLAG_LABELS = {
+        superseded: '<span class="badge badge-warning">Dibuang</span>',
+    };
+
+    function statusFlagLabel(value, type) {
+        if (type !== 'display') return value || '';
+        if (!value) return '<span class="text-muted">Normal</span>';
+        return STATUS_FLAG_LABELS[value] || value;
     }
 
     function animateCount(el, target, duration) {
@@ -287,6 +300,7 @@
                     return moment(d).format('DD MMM YYYY HH:mm');
                 }},
                 { data: 'feature', render: featureLabel },
+                { data: 'status_flag', orderable: false, render: statusFlagLabel },
                 { data: 'input_tokens',  className: 'text-right', render: fmt },
                 { data: 'output_tokens', className: 'text-right', render: fmt },
                 { data: 'total_tokens',  className: 'text-right', render: fmt },
