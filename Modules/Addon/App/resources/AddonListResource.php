@@ -18,6 +18,7 @@ class AddonListResource extends JsonResource
             "quantity" => $this->quantity,
             "charge" => $this->charge,
             "price" => $this->price,
+            "feature_key" => $this->feature?->key,
         ];
     }
 }
