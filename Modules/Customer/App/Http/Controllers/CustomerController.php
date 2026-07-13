@@ -205,7 +205,7 @@ class CustomerController extends Controller
                 ->whereNotNull('last_login_at')
                 ->orderBy('last_login_at', 'desc')
                 ->limit(5)
-                ->select('name', 'last_login_at')
+                ->select('name', 'last_login_at', 'last_activity')
                 ->get();
             
             // Get subscription data from backoffice database by company_id
