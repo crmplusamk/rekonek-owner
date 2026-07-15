@@ -2,7 +2,6 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Modules\Package\App\Http\Controllers\PackageApiController;
 
 /*
     |--------------------------------------------------------------------------
@@ -14,7 +13,3 @@ use Modules\Package\App\Http\Controllers\PackageApiController;
     | is assigned the "api" middleware group. Enjoy building your API!
     |
 */
-
-Route::prefix('v1')->group(function () {
-    Route::get('packages', [PackageApiController::class, 'index']);
-});

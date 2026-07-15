@@ -151,7 +151,7 @@ class CustomerController extends Controller
             // Get conversations by date with segmentation (total, open, closed)
             $conversationsByDate = DB::connection('client')
                 ->table('conversations')
-                ->selectRaw('DATE(last_chat) as date, COUNT(*) as total, SUM(CASE WHEN status::text = \'1\' THEN 1 ELSE 0 END) as open, SUM(CASE WHEN status::text = \'0\' THEN 1 ELSE 0 END) as closed')
+                ->selectRaw('DATE(last_chat) as date, COUNT(*) as total, SUM(CASE WHEN status::text = \'0\' THEN 1 ELSE 0 END) as open, SUM(CASE WHEN status::text = \'1\' THEN 1 ELSE 0 END) as closed')
                 ->where('company_id', $companyId)
                 ->whereBetween('last_chat', [$startDate, $endDate])
                 ->groupByRaw('DATE(last_chat)')
@@ -253,7 +253,6 @@ class CustomerController extends Controller
             }
             
             // Access Log Progress - Static stages in order (untuk tampilan pipeline di UI)
-            // Catatan: whatsapp_connected hanya untuk UI; tidak ada command followup untuk stage ini (command terpisah).
             $accessLogStages = [
                 'request_token' => 'Request Token',
                 'token_verified' => 'Token Verified',
@@ -262,7 +261,6 @@ class CustomerController extends Controller
                 'first_login_success' => 'First Login',
                 'onboarding_completed' => 'Onboarding Completed',
                 'trial_activated' => 'Trial Activated',
-                'whatsapp_connected' => 'Whatsapp Connected',
             ];
             
             // Query access logs for this customer

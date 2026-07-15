@@ -1,11 +1,7 @@
 <?php
 
 // use App\Models\Subscription;
-use App\Http\Controllers\Api\AccessLogApiController;
-use App\Http\Resources\AuthServiceResource;
 use Illuminate\Support\Facades\Route;
-use Modules\Subscription\App\Models\SubscriptionAddon;
-use Modules\Subscription\App\Models\SubscriptionPackage;
 use Modules\WhatsappOtp\App\Http\Controllers\WebhookOtpController;
 
 /*
@@ -21,47 +17,3 @@ use Modules\WhatsappOtp\App\Http\Controllers\WebhookOtpController;
 
 Route::post('chat-whatsapp-webhook-event/v2/private/{session}/{userId}', [WebhookOtpController::class, 'handle']);
 Route::post('chat-whatsapp-webhook-event/v3/private/{session}/{userId}', [WebhookOtpController::class, 'handle']);
-
-Route::post('access-logs', [AccessLogApiController::class, 'store']);
-
-Route::get('authentication/{companyid}', function ($companyid) {
-
-    // return response()->json([
-    //     'data' => $companyid
-    // ], 200);
-
-    try {
-
-        $subsPackage = SubscriptionPackage::forCompany($companyid)
-            ->with(['package.features.addon.subscriptionAddons' => function ($query) use ($companyid) {
-                $query->where([
-                    'company_id' => $companyid,
-                ]);
-            }])
-            ->orderByDesc('expired_at')
-            ->first();
-
-        if (! $subsPackage) {
-            return response()->json([
-                'error' => true,
-                'message' => 'No active subscription for current period.',
-            ], 404);
-        }
-
-        $subsAddon = SubscriptionAddon::where('company_id', $companyid)
-            ->with('addon.feature')
-            ->get();
-
-        return new AuthServiceResource([
-            'subsPackage' => $subsPackage,
-            'subsAddon' => $subsAddon,
-        ]);
-
-    } catch (\Exception $e) {
-
-        return response()->json([
-            'error' => true,
-            'message' => $e->getMessage(),
-        ], 500);
-    }
-});

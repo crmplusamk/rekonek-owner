@@ -2,7 +2,6 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Modules\Verification\App\Http\Controllers\VerificationApiController;
 
 /*
     |--------------------------------------------------------------------------
@@ -14,8 +13,3 @@ use Modules\Verification\App\Http\Controllers\VerificationApiController;
     | is assigned the "api" middleware group. Enjoy building your API!
     |
 */
-
-Route::prefix('v1')->name('api.')->group(function () {
-    Route::post('verification/send-token', [VerificationApiController::class, 'sendTokenVerification'])->name('verification.send.token');
-    Route::post('verification/token/verify', [VerificationApiController::class, 'tokenVerify'])->name('verification.token.verify');
-});

@@ -2,7 +2,6 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Modules\Addon\App\Http\Controllers\AddonApiController;
 
 /*
     |--------------------------------------------------------------------------
@@ -14,7 +13,3 @@ use Modules\Addon\App\Http\Controllers\AddonApiController;
     | is assigned the "api" middleware group. Enjoy building your API!
     |
 */
-
-Route::prefix('v1')->group(function () {
-    Route::get('addons', [AddonApiController::class, 'index']);
-});
