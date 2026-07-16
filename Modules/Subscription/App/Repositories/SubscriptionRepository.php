@@ -5,6 +5,7 @@ namespace Modules\Subscription\App\Repositories;
 use Illuminate\Support\Str;
 use Modules\Package\App\Models\Package;
 use Modules\Subscription\App\Models\SubscriptionPackage;
+use Modules\Subscription\App\Services\SubscriptionFeatureRuleService;
 
 class SubscriptionRepository
 {
@@ -19,6 +20,8 @@ class SubscriptionRepository
             'is_active' => $request['is_active'] ?? false,
             'company_id' => $request['company_id'] ?? null
         ]);
+
+        app(SubscriptionFeatureRuleService::class)->snapshot($data);
 
         return $data;
     }
@@ -81,6 +84,10 @@ class SubscriptionRepository
             'started_at' => now(),
             'expired_at' => $expired
         ]);
+
+        // Rebuild snapshot pada saat subscription benar-benar efektif (aturan paket mungkin
+        // berubah antara create pending → activate).
+        app(SubscriptionFeatureRuleService::class)->snapshot($data);
 
         return $data;
     }

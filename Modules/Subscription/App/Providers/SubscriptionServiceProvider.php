@@ -37,7 +37,10 @@ class SubscriptionServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-        // $this->commands([]);
+        $this->commands([
+            \Modules\Subscription\App\Console\BackfillFeatureRulesCommand::class,
+            \Modules\Subscription\App\Console\ReconcileFeatureRulesCommand::class,
+        ]);
     }
 
     /**

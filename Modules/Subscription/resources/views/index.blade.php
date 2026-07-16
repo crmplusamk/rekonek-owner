@@ -5,26 +5,22 @@
 <div class="row">
     <div class="col-12 mt-2">
         <div class="row">
-            <div class="col-md-10">
+            <div class="col-md-12">
                 <div class="btn-group btn-group-toggle btn-group-status" data-toggle="buttons">
-                    <label for="status_active" class="btn btn-outline-primary active">
-                        <input type="radio" name="filter_status" id="status_active" value="1">
-                        Active (0)
+                    <label class="btn btn-outline-primary active">
+                        <input type="radio" name="filter_status" value="" checked> Semua
                     </label>
-                    <label for="status_inactive" class="btn btn-outline-primary">
-                        <input type="radio" name="filter_status" id="status_inactive" value="0">
-                        Inactive (0)
+                    <label class="btn btn-outline-primary">
+                        <input type="radio" name="filter_status" value="1"> Active
+                    </label>
+                    <label class="btn btn-outline-primary">
+                        <input type="radio" name="filter_status" value="0"> Inactive
                     </label>
                 </div>
             </div>
-
-            <div class="col-md-2 text-right">
-                <a href="{{ route('subscription.create') }}" class="btn btn-primary">
-                    <i class="mdi mdi-plus"></i> Tambah
-                </a>
-            </div>
         </div>
     </div>
+
     <div class="col-12 mt-4 pt-1">
         <div class="border-1">
             <div class="p-3 border-bottom">
@@ -40,25 +36,7 @@
                             <option value="100">Tampil 100 data</option>
                         </select>
                     </div>
-                    <div class="col-md-4 mb-2"></div>
-                    <div class="col-md-3 mb-2  text-right">
-                        <div class="btn-group" role="group">
-                            <div class="btn-group" role="group">
-                                <button class="btn btn-outline-grey btn-sm dropdown-toggle col-sm-12 col-md-12" type="button" id="btnAction" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" disabled>
-                                    Action
-                                </button>
-                                <div class="dropdown-menu dropdown-menu-right">
-                                    <a class="dropdown-item" href="javascript:void(0)">
-                                        <i class="mdi mdi-close"></i> &nbsp;Deactivate
-                                    </a>
-                                    <hr class="m-0">
-                                    <a class="dropdown-item" href="javascript:void(0)">
-                                        <i class="mdi mdi-trash-can"></i> &nbsp;Hapus
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="col-md-7 mb-2"></div>
                 </div>
             </div>
 
@@ -70,10 +48,10 @@
                                 <input type="checkbox" id="checkAll">
                             </th>
                             <th class="text-center">Customer</th>
-                            <th class="text-center">Subscription Code</th>
+                            <th class="text-center">Kode</th>
                             <th class="text-center">Package</th>
-                            <th class="text-center">Started at</th>
-                            <th class="text-center">Expired at</th>
+                            <th class="text-center">Started</th>
+                            <th class="text-center">Expired</th>
                             <th class="text-center">Status</th>
                             <th data-orderable="false"></th>
                         </tr>
@@ -89,79 +67,59 @@
 @push('script')
 <script>
 
-    $(document).ready(function ()
-    {
-        subscriptionTable();
+    $(document).ready(function () {
+        subscriptionTableInit();
     });
 
-    let subscriptiontable;
+    let subscriptionTable;
     let search = '';
+    let filterStatus = '';
 
-    function subscriptionTable()
-    {
-        subscriptiontable = $('.subscription-table').DataTable({
+    function subscriptionTableInit() {
+        subscriptionTable = $('.subscription-table').DataTable({
             paging: true,
             processing: true,
             serverSide: true,
             ajax: {
                 url: "{{ route('subscription.table') }}",
                 dataType: 'json',
-                data: function(d) {
+                data: function (d) {
                     d.search = search;
+                    d.status = filterStatus;
                 },
             },
             columns: [
-                {
-                    data: "checkbox",
-                    sortable: false,
-                },
-                {
-                    data: "customer",
-                    sortable: false,
-                },
-                {
-                    data: "code",
-                },
-                {
-                    data: "package",
-                    sortable: false,
-                },
-                {
-                    data: "started_at",
-                    sortable: false,
-                },
-                {
-                    data: "expired_at",
-                    sortable: false,
-                },
-                {
-                    data: "status",
-                    sortable: false,
-                },
-                {
-                    data: "action",
-                    sortable: false,
-                },
+                { data: 'checkbox', sortable: false },
+                { data: 'customer', sortable: false },
+                { data: 'code' },
+                { data: 'package', sortable: false },
+                { data: 'started_at', sortable: false },
+                { data: 'expired_at', sortable: false },
+                { data: 'status', sortable: false },
+                { data: 'action', sortable: false },
             ],
             columnDefs: [
-                {
-                    className: 'dt-center',
-                    targets: [0, 2, 3, 4, 5, 6]
-                }
-            ],
-            order: [
-                [1, 'asc']
+                { className: 'dt-center', targets: [0, 2, 3, 4, 5, 6] }
             ],
             dom: 'lrtip',
+            order: [],
             length: 10,
             lengthChange: false,
         });
     }
 
-    $('#showCount').on('change', function() {
-        subscriptiontable.page.len(this.value).draw();
+    $('#search').on('keyup', debounce(function () {
+        search = this.value;
+        subscriptionTable.ajax.reload();
+    }, 500));
+
+    $('input[name="filter_status"]').on('change', function () {
+        filterStatus = this.value;
+        subscriptionTable.ajax.reload();
+    });
+
+    $('#showCount').on('change', function () {
+        subscriptionTable.page.len(this.value).draw();
     });
 </script>
 @endpush
-
-

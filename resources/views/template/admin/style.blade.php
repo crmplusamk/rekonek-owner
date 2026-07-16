@@ -11,3 +11,4 @@
 <link rel="stylesheet" href="{{ asset('assets/vendors/select2/select2.min.css') }}">
 <link rel="stylesheet" href="{{ asset('assets/vendors/sweetalert2-theme-bootstrap-4/bootstrap-4.min.css') }}">
 <link rel="stylesheet" href="{{ asset('assets/css/custom.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/css/rk-admin.css') }}">

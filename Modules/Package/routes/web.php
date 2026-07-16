@@ -18,6 +18,8 @@ Route::middleware('auth')->group(function () {
     Route::get('package/list', [PackageController::class, 'list'])->name('package.list');
     Route::get('package/get-datatable', [PackageController::class, 'datatable'])->name('package.table');
     Route::get('package/status/{id}', [PackageController::class, 'status'])->name('package.status');
+    Route::get('package/{id}/subscribers', [PackageController::class, 'subscribers'])->name('package.subscribers');
+    Route::post('package/{id}/push-rules', [PackageController::class, 'pushRules'])->name('package.push-rules');
 
     Route::resource('package', PackageController::class)->names('package');
 });

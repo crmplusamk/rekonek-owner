@@ -1,1 +1,1 @@
-<a href="{{ route('feature.show', $feature->id) }}" class="detail-link text-left">{{ $feature->name }}</a>
+<span class="font-weight-semibold">{{ $feature->name }}</span>

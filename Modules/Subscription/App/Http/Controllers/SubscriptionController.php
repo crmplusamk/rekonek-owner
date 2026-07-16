@@ -4,170 +4,83 @@ namespace Modules\Subscription\App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
-use Modules\Client\App\Services\CompanyService;
-use Modules\Subscription\App\Repositories\SubscriptionRepository;
+use Modules\Subscription\App\Models\SubscriptionPackage;
+use Modules\Subscription\App\Services\SubscriptionCrudService;
+use Modules\Subscription\App\Services\SubscriptionFeatureRuleService;
 
+/**
+ * Subscription bersifat VIEW-ONLY di admin owner (list + detail). Pembuatan/perubahan langganan
+ * terjadi lewat alur checkout (Modules/Checkout), bukan CRUD admin. Pengecualian: override MANUAL
+ * baris snapshot aturan fitur (deal khusus per-company) — bukan mengubah record subscription.
+ */
 class SubscriptionController extends Controller
 {
-    public $subscriptionRepo;
+    public function __construct(
+        private SubscriptionCrudService $service,
+        private SubscriptionFeatureRuleService $ruleService
+    ) {}
 
-    public function __construct(SubscriptionRepository $subscriptionRepo)
-    {
-        $this->subscriptionRepo = $subscriptionRepo;
-    }
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         return view('subscription::index');
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        try {
-
-            return view('subscription::create');
-
-        } catch (\Exception $e) {
-
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
-            return back();
-        }
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        DB::beginTransaction();
-        try {
-
-            $data = $this->subscriptionRepo->create($request->all());
-
-            // $api = new CompanyService;
-            // $api = $api->generate($data->customer);
-
-            // if (isset($api['error'])) {
-            //     DB::rollBack();
-            //     notify()->error("Terjadi kesalahan generate company. ".$api['message']);
-            //     return back()->withInput();
-            // }
-
-            // DB::commit();
-            // notify()->success("Berhasil membuat data subscription");
-            // return to_route('subscription.index');
-
-        } catch (\Exception $e) {
-
-            DB::rollBack();
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
-            return back()->withInput();
-        }
-    }
-
-    /**
-     * Show the specified resource.
-     */
     public function show($id)
     {
         try {
-
-            $data =  $this->subscriptionRepo->detail($id);
-            return view('subscription::show', compact('data'));
-
+            $data = $this->service->detail($id);
+            $rules = $this->service->featureRules($id);
+            return view('subscription::show', compact('data', 'rules'));
         } catch (\Exception $e) {
-
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
+            notify()->error('Terjadi kesalahan. ' . $e->getMessage());
             return back();
-        }
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
-    {
-        try {
-
-            $data =  $this->subscriptionRepo->detail($id);
-            return view('subscription::edit', compact('data'));
-
-        } catch (\Exception $e) {
-
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
-            return back();
-        }
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id)
-    {
-        try {
-
-            $this->subscriptionRepo->update($request->all(), $id);
-
-            notify()->success("Berhasil mengubah data subscription");
-            return to_route('subscription.index');
-
-        } catch (\Exception $e) {
-
-            DB::rollBack();
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
-            return back()->withInput();
-        }
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id)
-    {
-        try {
-
-            $user = $this->subscriptionRepo->delete($id);
-
-            if ($user != 403) {
-                notify()->success("Berhasil menghapus data subscription");
-                return to_route('subscription.index');
-            }
-
-            notify()->warning("Subscription tidak dapat dihapus");
-            return back();
-
-        } catch (\Exception $e) {
-
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
-            return back();
-        }
-    }
-
-    public function status($id)
-    {
-        try {
-
-            $this->subscriptionRepo->status($id);
-
-            notify()->success("Berhasil mengubah data subscription");
-            return to_route('subscription.index');
-
-        } catch (\Exception $e) {
-
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
-            return back()->withInput();
         }
     }
 
     public function datatable(Request $request)
     {
-        return $this->subscriptionRepo->datatable();
+        return $this->service->datatable();
+    }
+
+    /** Override manual satu baris aturan snapshot (source='manual'). */
+    public function updateRule(Request $request, $id, $featureId)
+    {
+        $request->validate([
+            'limit_mode' => ['required', 'in:none,unlimited,limited'],
+            'limit' => ['required_if:limit_mode,limited', 'nullable', 'integer', 'min:1'],
+            'limit_type' => ['required_if:limit_mode,limited', 'nullable', 'in:max,day,month,time'],
+        ]);
+
+        try {
+            $subscription = SubscriptionPackage::findOrFail($id);
+            $mode = $request->limit_mode;
+
+            $this->ruleService->setManualRule($subscription, $featureId, [
+                'included' => $request->input('included') === 'on',
+                'visiblity' => $request->input('visiblity', 'on') === 'on',
+                'limit' => $mode === 'limited' ? (string) (int) $request->limit : ($mode === 'unlimited' ? '-1' : null),
+                'limit_type' => $mode === 'limited' ? $request->limit_type : null,
+            ]);
+
+            notify()->success('Aturan fitur berhasil di-override (manual)');
+            return back();
+        } catch (\Exception $e) {
+            notify()->error('Terjadi kesalahan. ' . $e->getMessage());
+            return back();
+        }
+    }
+
+    /** Reset satu baris aturan ke nilai paket saat ini (source='package'). */
+    public function resetRule($id, $featureId)
+    {
+        try {
+            $subscription = SubscriptionPackage::findOrFail($id);
+            $this->ruleService->resetRule($subscription, $featureId);
+            notify()->success('Aturan fitur direset ke paket');
+            return back();
+        } catch (\Exception $e) {
+            notify()->error('Terjadi kesalahan. ' . $e->getMessage());
+            return back();
+        }
     }
 }

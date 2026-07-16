@@ -18,6 +18,7 @@ Route::middleware('auth')->group(function () {
     Route::get('addon/get-datatable', [AddonController::class, 'datatable'])->name('addon.table');
     Route::get('addon/status/{id}', [AddonController::class, 'status'])->name('addon.status');
 
-    Route::resource('addon', AddonController::class)->names('addon');
+    // CRUD addon lewat modal di halaman index (tanpa halaman create/show/edit terpisah).
+    Route::resource('addon', AddonController::class)->names('addon')->except(['create', 'show', 'edit']);
 });
 

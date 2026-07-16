@@ -31,6 +31,9 @@ class SubscriptionService
             'grace_started_at' => $data['grace_started_at'] ?? null,
         ]);
 
+        // Bekukan snapshot aturan fitur bawaan paket untuk cycle baru ini (grandfathering).
+        app(SubscriptionFeatureRuleService::class)->snapshot($data);
+
         $data->load('package');
         return $data;
     }
