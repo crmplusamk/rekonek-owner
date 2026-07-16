@@ -1,0 +1,188 @@
+/* ==========================================================================
+   rk-admin.css — shared admin UI layer (opt-in, prefixed .rk-*)
+   Consistency pass for Feature / Package / Addon / Subscription modules.
+   Bootstrap 4 + static assets; no build step.
+   ========================================================================== */
+
+:root {
+    --rk-primary: #131c5b;
+    --rk-primary-600: #1c2a86;
+    --rk-primary-050: #eef1fb;
+    --rk-text: #1f2430;
+    --rk-muted: #7a8194;
+    --rk-border: #e7e9f0;
+    --rk-surface: #ffffff;
+    --rk-bg: #f6f7fb;
+    --rk-success: #1a9d63;
+    --rk-danger: #d64550;
+    --rk-warning: #d99612;
+    --rk-radius: 12px;
+    --rk-radius-sm: 8px;
+    --rk-shadow: 0 1px 2px rgba(19, 28, 91, .04), 0 6px 20px rgba(19, 28, 91, .05);
+    --rk-space: 1.25rem;
+}
+
+/* ---- Page header ---------------------------------------------------------- */
+.rk-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    margin-bottom: 1.5rem;
+}
+.rk-page-header-main {
+    display: flex;
+    align-items: center;
+    gap: .85rem;
+    min-width: 0;
+}
+.rk-page-title {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.35rem;
+    color: var(--rk-text);
+    line-height: 1.2;
+}
+.rk-page-subtitle {
+    margin: 2px 0 0;
+    font-size: .85rem;
+    color: var(--rk-muted);
+}
+.rk-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--rk-primary-050);
+    color: var(--rk-primary);
+    font-size: 1.4rem;
+    transition: background .15s ease;
+    flex: none;
+}
+.rk-back:hover { background: #e2e6f8; color: var(--rk-primary); text-decoration: none; }
+.rk-page-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+/* ---- Card ----------------------------------------------------------------- */
+.rk-card {
+    background: var(--rk-surface);
+    border: 1px solid var(--rk-border);
+    border-radius: var(--rk-radius);
+    box-shadow: var(--rk-shadow);
+    margin-bottom: var(--rk-space);
+}
+.rk-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--rk-border);
+}
+.rk-card-title { margin: 0; font-weight: 700; font-size: 1rem; color: var(--rk-text); }
+.rk-card-subtitle { font-size: .82rem; color: var(--rk-muted); }
+.rk-card-body { padding: 1.25rem; }
+
+/* ---- Toolbar (search / filters above tables) ------------------------------ */
+.rk-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .75rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--rk-border);
+}
+.rk-toolbar .rk-search { position: relative; flex: 1 1 260px; max-width: 340px; }
+.rk-toolbar .rk-search .mdi {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    color: var(--rk-muted); font-size: 1.1rem;
+}
+.rk-toolbar .rk-search input { padding-left: 36px; }
+.rk-toolbar-spacer { flex: 1 1 auto; }
+
+/* ---- Segmented filter (replaces the old btn-group-toggle) ----------------- */
+.rk-segment { display: inline-flex; background: var(--rk-primary-050); border-radius: 999px; padding: 3px; }
+.rk-segment .rk-segment-item {
+    border: 0; background: transparent; color: var(--rk-muted);
+    padding: .35rem .95rem; border-radius: 999px; font-size: .85rem; font-weight: 600;
+    cursor: pointer; transition: all .15s ease;
+}
+.rk-segment .rk-segment-item.active { background: var(--rk-primary); color: #fff; box-shadow: var(--rk-shadow); }
+
+/* ---- Tables --------------------------------------------------------------- */
+.rk-table-wrap { padding: .25rem; }
+table.rk-table { width: 100%; margin-bottom: 0; color: var(--rk-text); }
+table.rk-table thead th {
+    border: 0;
+    border-bottom: 1px solid var(--rk-border);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--rk-muted);
+    padding: .85rem 1rem;
+    white-space: nowrap;
+}
+table.rk-table tbody td {
+    border: 0;
+    border-bottom: 1px solid var(--rk-border);
+    padding: .85rem 1rem;
+    vertical-align: middle;
+    font-size: .9rem;
+}
+table.rk-table tbody tr:last-child td { border-bottom: 0; }
+table.rk-table tbody tr:hover { background: var(--rk-bg); }
+
+/* ---- Status badges -------------------------------------------------------- */
+.rk-badge {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .25rem .6rem; border-radius: 999px;
+    font-size: .75rem; font-weight: 600; line-height: 1;
+}
+.rk-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.rk-badge-success { color: var(--rk-success); background: rgba(26, 157, 99, .1); }
+.rk-badge-danger  { color: var(--rk-danger);  background: rgba(214, 69, 80, .1); }
+.rk-badge-muted   { color: var(--rk-muted);   background: rgba(122, 129, 148, .12); }
+
+/* ---- Empty state ---------------------------------------------------------- */
+.rk-empty-state { text-align: center; padding: 3rem 1rem; color: var(--rk-muted); }
+.rk-empty-state .mdi { font-size: 3rem; opacity: .5; display: block; margin-bottom: .5rem; }
+.rk-empty-title { font-weight: 600; color: var(--rk-text); margin-bottom: .25rem; }
+.rk-empty-message { font-size: .88rem; margin: 0; }
+.rk-empty-actions { margin-top: 1rem; }
+
+/* ---- Forms ---------------------------------------------------------------- */
+.rk-form-group { margin-bottom: 1.1rem; }
+.rk-label { font-weight: 600; font-size: .85rem; color: var(--rk-text); margin-bottom: .4rem; }
+.rk-field-error { display: block; margin-top: .3rem; color: var(--rk-danger); font-size: .8rem; }
+.rk-form-section-title {
+    font-weight: 700; font-size: .95rem; color: var(--rk-text);
+    margin: .25rem 0 1rem; padding-bottom: .5rem; border-bottom: 1px solid var(--rk-border);
+}
+
+/* ---- Feature matrix (package create/edit) --------------------------------- */
+.rk-feature-matrix { width: 100%; }
+.rk-feature-matrix .rk-feature-group td {
+    background: var(--rk-primary-050);
+    font-weight: 700; color: var(--rk-primary);
+    padding: .6rem 1rem; border: 0;
+}
+.rk-feature-matrix .row-data td,
+.rk-feature-matrix .row-data th { border-bottom: 1px solid var(--rk-border); padding: .5rem 1rem; }
+.rk-feature-matrix .row-data th { font-weight: 500; color: var(--rk-text); }
+
+/* ---- Buttons (gentle refinement, opt-in) ---------------------------------- */
+.rk-card .btn-primary,
+.rk-page-actions .btn-primary {
+    background: var(--rk-primary); border-color: var(--rk-primary);
+}
+.rk-card .btn-primary:hover,
+.rk-page-actions .btn-primary:hover {
+    background: var(--rk-primary-600); border-color: var(--rk-primary-600);
+}
+
+/* ---- Row action menu ------------------------------------------------------ */
+.rk-row-action .btn { color: var(--rk-muted); padding: .2rem .45rem; line-height: 1; }
+.rk-row-action .btn:hover { color: var(--rk-primary); }

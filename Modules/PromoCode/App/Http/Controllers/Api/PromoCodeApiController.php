@@ -6,90 +6,11 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use Modules\PromoCode\App\Models\PromoCode;
 use Modules\PromoCode\App\Models\PromoCodeUsage;
 
 class PromoCodeApiController extends Controller
 {
-    /**
-     * Check promo code availability and validate.
-     * Konteks: is_renew false = registrasi/baru, true = perpanjangan.
-     */
-    public function check(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'code' => 'required|string',
-            'amount' => 'nullable|numeric|min:0',
-            'customer_id' => 'nullable|uuid',
-            'company_id' => 'nullable|uuid',
-            'is_renew' => ['nullable', Rule::in(['true', 'false', '1', '0', true, false, 1, 0])],
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $promoCode = PromoCode::where('code', $request->code)->first();
-
-        if (! $promoCode) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Kode promo tidak ditemukan',
-            ], 404);
-        }
-
-        if (! $promoCode->isAvailable()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Kode promo tidak tersedia atau sudah kadaluarsa',
-            ], 400);
-        }
-
-        if (! $promoCode->canBeUsedBy($request->customer_id, $request->company_id)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Anda telah mencapai batas penggunaan promo code ini',
-            ], 400);
-        }
-
-        // is_renew false = registrasi (else). is_renew true = perpanjangan (if). Langsung pass bool ke model.
-        $isPerpanjangan = $request->filled('is_renew') ? $request->boolean('is_renew') : false;
-        $config = $promoCode->getDiscountForContext($isPerpanjangan);
-
-        $discount = null;
-        if ($request->amount !== null && $request->amount > 0) {
-            $minPurchase = $config['min_purchase'];
-            if ($minPurchase !== null && (float) $minPurchase > 0 && $request->amount < (float) $minPurchase) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Minimal pembelian untuk promo code ini adalah '.number_format((float) $minPurchase, 0, ',', '.'),
-                ], 400);
-            }
-            $discount = $promoCode->calculateDiscountForContext((float) $request->amount, $isPerpanjangan);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Kode promo valid',
-            'data' => [
-                'code' => $promoCode->code,
-                'name' => $promoCode->name,
-                'discount_type' => $config['discount_type'],
-                'discount_percentage' => $config['discount_percentage'],
-                'discount_amount' => $config['discount_amount'],
-                'min_purchase' => $config['min_purchase'],
-                'max_discount' => $config['max_discount'],
-                'discount' => $discount,
-                'description' => $promoCode->description,
-            ],
-        ], 200);
-    }
-
     /**
      * Calculate discount for given amount
      */

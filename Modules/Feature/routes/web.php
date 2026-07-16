@@ -17,10 +17,11 @@ use Modules\Feature\App\Http\Controllers\FeatureController;
 
 Route::middleware('auth')->group(function () {
     Route::get('feature/get-datatable', [FeatureController::class, 'datatable'])->name('feature.table');
-    Route::resource('feature', FeatureController::class)->names('feature');
+    // CRUD fitur lewat modal di index (tanpa halaman create/show/edit terpisah).
+    Route::resource('feature', FeatureController::class)->names('feature')->except(['create', 'show', 'edit']);
 
     Route::get('feature-category/get-datatable', [FeatureCategoryController::class, 'datatable'])->name('feature.category.table');
     Route::get('feature-category/get-list', [FeatureCategoryController::class, 'list'])->name('feature.category.list');
 
-    Route::resource('feature-category', FeatureCategoryController::class)->names('feature.category');
+    Route::resource('feature-category', FeatureCategoryController::class)->names('feature.category')->except(['create', 'show', 'edit']);
 });

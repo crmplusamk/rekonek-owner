@@ -116,7 +116,7 @@ class CustomerRepository
                     "2" => 'contacts.code',
                     "3" => 'contacts.phone',
                     "4" => 'contacts.created_at',
-                    "9" => 'contacts.is_active',
+                    "10" => 'contacts.is_active',
                 ];
 
                 if (isset($orderMappings[$column])) {
@@ -124,7 +124,9 @@ class CustomerRepository
                         ->orderBy('contacts.id', 'desc');
                 } elseif ($column === '5') {
                     $this->orderByLastLogin($query, $dir);
-                } elseif (in_array($column, ['6', '7', '8'])) {
+                } elseif ($column === '6') {
+                    $this->orderByLastActivity($query, $dir);
+                } elseif (in_array($column, ['7', '8', '9'])) {
                     $this->orderBySubscription($query, $column, $dir);
                 }
             })
@@ -157,6 +159,19 @@ class CustomerRepository
                 }
 
                 return \Carbon\Carbon::parse($lastLogin)->format('d M Y H:i');
+            })
+            ->addColumn('last_activity', function ($customer) {
+                $lastActivity = DB::connection('client')
+                    ->table('users')
+                    ->where('company_id', $customer->company_id)
+                    ->whereNotNull('last_activity')
+                    ->max('last_activity');
+
+                if (!$lastActivity) {
+                    return '-';
+                }
+
+                return \Carbon\Carbon::parse($lastActivity)->format('d M Y H:i');
             })
             ->addColumn('code', function ($customer) {
                 return view('customer::table_partials._code', [
@@ -220,6 +235,31 @@ class CustomerRepository
             ->select('company_id')
             ->groupBy('company_id')
             ->orderByRaw('MAX(last_login_at) '.$dir)
+            ->pluck('company_id')
+            ->values()
+            ->all();
+
+        if (empty($companyIds)) {
+            return;
+        }
+
+        $quotedIds = collect($companyIds)
+            ->map(fn ($companyId) => "'".str_replace("'", "''", $companyId)."'")
+            ->implode(',');
+
+        $query->orderByRaw("array_position(ARRAY[$quotedIds]::uuid[], contacts.company_id) ASC NULLS LAST")
+            ->orderBy('contacts.id', 'desc');
+    }
+
+    private function orderByLastActivity($query, string $dir): void
+    {
+        $companyIds = DB::connection('client')
+            ->table('users')
+            ->whereNotNull('company_id')
+            ->whereNotNull('last_activity')
+            ->select('company_id')
+            ->groupBy('company_id')
+            ->orderByRaw('MAX(last_activity) '.$dir)
             ->pluck('company_id')
             ->values()
             ->all();

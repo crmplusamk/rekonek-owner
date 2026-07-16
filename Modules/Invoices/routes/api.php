@@ -2,7 +2,6 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Modules\Invoices\App\Http\Controllers\InvoiceApiController;
 
 /*
     |--------------------------------------------------------------------------
@@ -14,10 +13,3 @@ use Modules\Invoices\App\Http\Controllers\InvoiceApiController;
     | is assigned the "api" middleware group. Enjoy building your API!
     |
 */
-
-Route::prefix('v1')->name('api.')->group(function ()
-{
-    Route::get('invoices', [InvoiceApiController::class, 'index'])->name('invoice.index');
-    Route::get('invoices/count-unpaid', [InvoiceApiController::class, 'countUnpaid'])->name('invoice.count-unpaid');
-    Route::get('invoice/{id}/show', [InvoiceApiController::class, 'show'])->name('invoice.show');
-});

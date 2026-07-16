@@ -2,29 +2,23 @@
 
 namespace Modules\Package\App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\RedirectResponse;
-use Modules\Feature\App\Models\Feature;
-use Modules\Feature\App\Repositories\FeatureRepository;
+use Illuminate\Http\Request;
+use Modules\Package\App\Http\Requests\StorePackageRequest;
+use Modules\Package\App\Http\Requests\UpdatePackageRequest;
 use Modules\Package\App\Models\Package;
-use Modules\Package\App\Repositories\PackageRepository;
+use Modules\Package\App\Services\PackageCrudService;
+use Modules\Subscription\App\Jobs\PushPackageRulesJob;
+use Modules\Subscription\App\Jobs\ReconcilePackageFeatureRulesJob;
+use Modules\Subscription\App\Services\SubscriptionFeatureRuleService;
 
 class PackageController extends Controller
 {
-    public $packageRepo;
-    public $featureRepo;
+    public function __construct(
+        private PackageCrudService $service,
+        private SubscriptionFeatureRuleService $ruleService
+    ) {}
 
-    public function __construct(PackageRepository $packageRepo, FeatureRepository $featureRepo)
-    {
-        $this->packageRepo = $packageRepo;
-        $this->featureRepo = $featureRepo;
-    }
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         return view('package::index');
@@ -32,135 +26,91 @@ class PackageController extends Controller
 
     public function list(Request $request)
     {
-        $packages = Package::when($request->search, function($query) {
-            $query->where('is_active', true)->paginate(10);
-        })
-        ->paginate(10);
-
-        return $packages;
+        return Package::when(
+            $request->search,
+            fn ($query) => $query->where('name', 'ilike', '%' . $request->search . '%')
+        )->paginate(10);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         try {
-
-            $features = $this->featureRepo->list();
-            return view('package::create', compact('features'));
-
+            return view('package::create', $this->service->formData());
         } catch (\Exception $e) {
-
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
+            notify()->error('Terjadi kesalahan. ' . $e->getMessage());
             return back();
         }
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function store(StorePackageRequest $request)
     {
-        DB::beginTransaction();
         try {
-
-            $this->packageRepo->create($request->all());
-
-            DB::commit();
-            notify()->success("Berhasil membuat data package");
+            $this->service->create($request->all());
+            notify()->success('Berhasil membuat data package');
             return to_route('package.index');
-
         } catch (\Exception $e) {
-
-            DB::rollBack();
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
+            notify()->error('Terjadi kesalahan. ' . $e->getMessage());
             return back()->withInput();
         }
     }
 
-    /**
-     * Show the specified resource.
-     */
     public function show($id)
     {
         try {
-
-            $data =  $this->packageRepo->detail($id);
+            $data = $this->service->detail($id);
             return view('package::show', compact('data'));
-
         } catch (\Exception $e) {
-
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
+            notify()->error('Terjadi kesalahan. ' . $e->getMessage());
             return back();
         }
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit($id)
     {
         try {
+            $package = Package::findOrFail($id);
+            $form = $this->service->formData($package);
 
-            $package = $this->packageRepo->getById($id);
-            $features = $this->featureRepo->list();
-            $rules = DB::table('package_feature')->where('package_id', $package->id)->get();
-
-            $tmpRules = [];
-            foreach($rules as $rule) {
-                $tmpRules[$rule->feature_id] = $rule;
-            }
-
-            return view('package::edit', compact('package', 'features', 'tmpRules'));
-
+            return view('package::edit', [
+                'package' => $package,
+                'features' => $form['features'],
+                'tmpRules' => $form['rules'],
+            ]);
         } catch (\Exception $e) {
-
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
+            notify()->error('Terjadi kesalahan. ' . $e->getMessage());
             return back();
         }
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id)
+    public function update(UpdatePackageRequest $request, $id)
     {
         try {
+            $this->service->update($request->all(), $id);
 
-            $this->packageRepo->update($request->all(), $id);
+            // Rekonsiliasi keanggotaan fitur (tambah/hapus) ke snapshot subscriber aktif paket ini.
+            // Nilai limit fitur existing tetap beku (grandfathering) — perubahan nilai lewat push terkontrol.
+            ReconcilePackageFeatureRulesJob::dispatch($id);
 
-            notify()->success("Berhasil mengubah data package");
+            notify()->success('Berhasil mengubah data package');
             return to_route('package.index');
-
         } catch (\Exception $e) {
-
-            DB::rollBack();
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
+            notify()->error('Terjadi kesalahan. ' . $e->getMessage());
             return back()->withInput();
         }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy($id)
     {
         try {
-
-            $user = $this->packageRepo->delete($id);
-
-            if ($user != 403) {
-                notify()->success("Berhasil menghapus data package");
+            if ($this->service->delete($id)) {
+                notify()->success('Berhasil menghapus data package');
                 return to_route('package.index');
             }
 
-            notify()->warning("Package tidak dapat dihapus");
+            notify()->warning('Package tidak dapat dihapus karena masih memiliki pelanggan');
             return back();
-
         } catch (\Exception $e) {
-
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
+            notify()->error('Terjadi kesalahan. ' . $e->getMessage());
             return back();
         }
     }
@@ -168,21 +118,52 @@ class PackageController extends Controller
     public function status($id)
     {
         try {
-
-            $this->packageRepo->status($id);
-
-            notify()->success("Berhasil mengubah data package");
+            $this->service->toggleStatus($id);
+            notify()->success('Berhasil mengubah status package');
             return to_route('package.index');
-
         } catch (\Exception $e) {
-
-            notify()->error("Terjadi kesalahan. ".$e->getMessage());
+            notify()->error('Terjadi kesalahan. ' . $e->getMessage());
             return back()->withInput();
         }
     }
 
     public function datatable(Request $request)
     {
-        return $this->packageRepo->datatable();
+        return $this->service->datatable();
+    }
+
+    /** Daftar subscriber aktif paket (untuk picker & hitung dampak push terkontrol). */
+    public function subscribers($id)
+    {
+        $subs = $this->ruleService->activeSubscriptions($id);
+
+        return response()->json([
+            'count' => $subs->count(),
+            'data' => $subs->map(fn ($s) => [
+                'id' => $s->id,
+                'text' => ($s->customer->name ?? '-') . ' — ' . $s->code,
+            ])->values(),
+        ]);
+    }
+
+    /** Push terkontrol: terapkan aturan paket saat ini ke snapshot pelanggan terpilih. */
+    public function pushRules(Request $request, $id)
+    {
+        $request->validate([
+            'scope' => ['required', 'in:all,selected'],
+            'subscription_ids' => ['required_if:scope,selected', 'array'],
+            'subscription_ids.*' => ['string'],
+        ], [], ['subscription_ids' => 'pelanggan']);
+
+        try {
+            $ids = $request->scope === 'selected' ? $request->subscription_ids : null;
+            PushPackageRulesJob::dispatch($id, $ids, $request->boolean('overwrite_manual'));
+
+            notify()->success('Penerapan aturan ke pelanggan sedang diproses di latar belakang.');
+            return back();
+        } catch (\Exception $e) {
+            notify()->error('Terjadi kesalahan. ' . $e->getMessage());
+            return back();
+        }
     }
 }

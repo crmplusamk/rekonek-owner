@@ -2,7 +2,6 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Modules\Deleted\App\Http\Controllers\DeletedCompanyApiController;
 
 /*
     |--------------------------------------------------------------------------
@@ -14,8 +13,3 @@ use Modules\Deleted\App\Http\Controllers\DeletedCompanyApiController;
     | is assigned the "api" middleware group. Enjoy building your API!
     |
 */
-
-Route::prefix('v1')->name('api.')->group(function ()
-{
-    Route::post('delete-company-account', [DeletedCompanyApiController::class, 'store'])->name('deleted-account.store');
-});

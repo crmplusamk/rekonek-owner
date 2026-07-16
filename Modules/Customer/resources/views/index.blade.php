@@ -74,6 +74,7 @@
                             <th class="text-center">Phone</th>
                             <th class="text-center">Register At</th>
                             <th class="text-center">Last Login</th>
+                            <th class="text-center">Last Activity</th>
                             <th class="text-center">Subscription</th>
                             <th class="text-center">Started</th>
                             <th class="text-center">Expired</th>
@@ -138,6 +139,10 @@
                     sortable: false,
                 },
                 {
+                    data: "last_activity",
+                    sortable: false,
+                },
+                {
                     data: "subscription",
                 },
                 {
@@ -157,7 +162,7 @@
             columnDefs: [
                 {
                     className: 'dt-center',
-                    targets: [0, 2, 3, 4, 5, 6, 7, 8, 9]
+                    targets: [0, 2, 3, 4, 5, 6, 7, 8, 9, 10]
                 }
             ],
             dom: 'lrtip',

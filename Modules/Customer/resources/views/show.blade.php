@@ -477,12 +477,13 @@
             @if(count($data['recent_logins']) > 0)
                 <div class="list-group">
                     @foreach($data['recent_logins'] as $index => $login)
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                    <strong>{{ $login->name }}</strong>
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>{{ $login->name }}</strong>
                             </div>
-                            <div class="text-muted text-xs">
-                                {{ \Carbon\Carbon::parse($login->last_login_at)->format('d M Y, H:i') }}
+                            <div class="d-flex justify-content-between mt-1">
+                                <small class="text-muted">Login: {{ \Carbon\Carbon::parse($login->last_login_at)->format('d M Y, H:i') }}</small>
+                                <small class="text-muted">Aktivitas: {{ $login->last_activity ? \Carbon\Carbon::parse($login->last_activity)->format('d M Y, H:i') : '-' }}</small>
                             </div>
                         </div>
                     @endforeach
