@@ -69,6 +69,13 @@
                         <div class="form-control-feedback"></div>
                     </div>
                     <div class="form-group">
+                        <label>Tipe Billing <span class="text-danger">*</span></label>
+                        <select name="billing_type" class="form-control" required>
+                            <option value="recurring" {{ ($addon->billing_type ?? 'recurring') === 'recurring' ? 'selected' : '' }}>Recurring (prorata, ikut paket)</option>
+                            <option value="onetime" {{ $addon->billing_type === 'onetime' ? 'selected' : '' }}>Sekali beli / prepaid (AI Credit)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label>Deskripsi</label>
                         <textarea name="description" class="form-control" rows="3">{{ $addon->description }}</textarea>
                     </div>

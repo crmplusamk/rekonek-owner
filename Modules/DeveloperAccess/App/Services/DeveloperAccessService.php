@@ -1,13 +1,13 @@
 <?php
 
-namespace Modules\DeveloperAccess\App\Repositories;
+namespace Modules\DeveloperAccess\App\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Modules\DeveloperAccess\App\Models\DeveloperAccess;
 
-class DeveloperAccessRepository
+class DeveloperAccessService
 {
 
     /**

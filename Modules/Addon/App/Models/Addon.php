@@ -12,9 +12,22 @@ class Addon extends Model
 {
     use HasFactory, UuidTrait;
 
+    /**
+     * Tipe billing addon (kolom billing_type). Mengatur perilaku harga/proration/renewal/akumulasi
+     * (lihat migrasi add_billing_type_to_addons_table). BUKAN identitas fitur — metering AI Credit
+     * tetap pakai feature.key = 'AICRD'.
+     */
+    public const BILLING_RECURRING = 'recurring'; // co-terminous paket, prorata, rebill renewal, kapasitas dipertahankan
+    public const BILLING_ONETIME = 'onetime';     // sekali beli / prepaid (AI Credit): harga penuh, carry-over, akumulasi
+
     protected $table = 'addons';
 
     protected $guarded = [];
+
+    public function isOneTime(): bool
+    {
+        return $this->billing_type === self::BILLING_ONETIME;
+    }
 
     // public function invoiceItems()
     // {

@@ -13,8 +13,8 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Modules\Addon\App\Models\Addon;
-use Modules\Customer\App\Repositories\CustomerRepository;
-use Modules\Invoices\App\Repositories\InvoiceRepository;
+use Modules\Customer\App\Services\CustomerService;
+use Modules\Invoices\App\Services\InvoiceService;
 use Modules\Package\App\Models\Package;
 use Modules\Package\App\Services\PackageService;
 use Modules\Subscription\App\Models\SubscriptionAddon;
@@ -39,8 +39,8 @@ class GenerateRenewalInvoiceJob implements ShouldQueue, ShouldBeUnique
     }
 
     public function handle(
-        CustomerRepository $customerRepo,
-        InvoiceRepository $invoiceRepo,
+        CustomerService $customerService,
+        InvoiceService $invoiceService,
         PackageService $packageSrv,
     ): void {
         try {
@@ -76,7 +76,7 @@ class GenerateRenewalInvoiceJob implements ShouldQueue, ShouldBeUnique
             }
 
             /** Ambil customer */
-            $customer = $customerRepo->getByCompanyId($subsPackage->company_id);
+            $customer = $customerService->getByCompanyId($subsPackage->company_id);
             if (!$customer) {
                 Log::error('GenerateRenewalInvoiceJob: Customer not found', [
                     'company_id' => $subsPackage->company_id,
@@ -136,7 +136,15 @@ class GenerateRenewalInvoiceJob implements ShouldQueue, ShouldBeUnique
                 if (!$addon) continue;
 
                 $addonPrice = $this->calculateAddonPrice($addon->price, $termin);
-                $quantity = max(1, $subsAddon->charge ?? 1);
+
+                // subscription_addons.charge = total UNIT; harga & subtotal dihitung per BLOK.
+                // Ukuran blok = addons.charge (Nomor WA/CS Agent = 1, MAU/AI Credit = 1000).
+                // Jumlah blok = unit / ukuran_blok. Bandingkan PackageService::addonItem (checkout
+                // awal) yang menyimpan quantity=blok & charge=blok×ukuran_blok. Bug sebelumnya:
+                // quantity = charge (unit) → subtotal 1000× lipat untuk addon berukuran-blok.
+                $blockSize = max(1, (int) $addon->charge);
+                $units = max(1, (int) ($subsAddon->charge ?? 1));
+                $blocks = max(1, intdiv($units, $blockSize));
 
                 $items[] = [
                     'modelable_id' => $addon->id,
@@ -145,17 +153,17 @@ class GenerateRenewalInvoiceJob implements ShouldQueue, ShouldBeUnique
                     'duration_type' => $termin,
                     'termin' => $termin,
                     'termin_duration' => $terminDuration,
-                    'quantity' => $quantity,
-                    'charge' => $subsAddon->charge ?? 1,
+                    'quantity' => $blocks,
+                    'charge' => $units,              // TETAP unit — dibaca settlement (updateAddon)
                     'price' => $addonPrice,
-                    'subtotal' => $addonPrice * $quantity,
+                    'subtotal' => $addonPrice * $blocks,
                     'start_date' => $subsPackage->expired_at,
                     'end_date' => Carbon::parse($subsPackage->expired_at)
                         ->add($terminDuration, $termin . 's')
                         ->format('Y-m-d H:i:s'),
                 ];
 
-                $subtotal += $addonPrice * $quantity;
+                $subtotal += $addonPrice * $blocks;
             }
 
             if (empty($items)) {
@@ -169,7 +177,7 @@ class GenerateRenewalInvoiceJob implements ShouldQueue, ShouldBeUnique
             /** Calculate & create invoice */
             $calculate = $packageSrv->calculateTotal($subtotal);
 
-            $invoice = $invoiceRepo->create([
+            $invoice = $invoiceService->create([
                 'customer_id' => $customer->id,
                 'customer_name' => $customer->name ?? 'Customer',
                 'customer_email' => $customer->email ?? '',

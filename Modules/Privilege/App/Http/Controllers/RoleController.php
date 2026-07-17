@@ -4,16 +4,16 @@ namespace Modules\Privilege\App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use Modules\Privilege\App\Repositories\RoleRepository;
+use Modules\Privilege\App\Services\RoleService;
 
 class RoleController extends Controller
 {
 
-    public $roleRepo;
+    public $roleService;
 
-    public function __construct(RoleRepository $roleRepo)
+    public function __construct(RoleService $roleService)
     {
-        $this->roleRepo = $roleRepo;
+        $this->roleService = $roleService;
     }
     /**
      * Display a listing of the resource.
@@ -38,7 +38,7 @@ class RoleController extends Controller
     {
         try {
 
-            $this->roleRepo->create($request->all());
+            $this->roleService->create($request->all());
 
             notify()->success("Berhasil membuat data role");
             return to_route('role.index');
@@ -57,7 +57,7 @@ class RoleController extends Controller
     {
         try {
 
-            $role =  $this->roleRepo->detail($id);
+            $role =  $this->roleService->detail($id);
             return view('privilege::role.show', compact('role'));
 
         } catch (\Exception $e) {
@@ -74,7 +74,7 @@ class RoleController extends Controller
     {
         try {
 
-            $role =  $this->roleRepo->getById($id);
+            $role =  $this->roleService->getById($id);
             return view('privilege::role.edit', compact('role'));
 
         } catch (\Exception $e) {
@@ -91,7 +91,7 @@ class RoleController extends Controller
     {
         try {
 
-            $this->roleRepo->update($request->all(), $id);
+            $this->roleService->update($request->all(), $id);
 
             notify()->success("Berhasil mengubah data role");
             return to_route('role.index');
@@ -110,7 +110,7 @@ class RoleController extends Controller
     {
         try {
 
-            $role = $this->roleRepo->delete($id);
+            $role = $this->roleService->delete($id);
             if ($role != 403) {
                 notify()->success("Berhasil ". ($role == 200 ? 'menonaktifkan' : 'menghapus') ." data role");
                 return to_route('role.index');
@@ -130,7 +130,7 @@ class RoleController extends Controller
     {
         try {
 
-            $this->roleRepo->status($id);
+            $this->roleService->status($id);
 
             notify()->success("Berhasil mengubah data role");
             return to_route('role.index');
@@ -144,6 +144,6 @@ class RoleController extends Controller
 
     public function datatable(Request $request)
     {
-        return $this->roleRepo->datatable();
+        return $this->roleService->datatable();
     }
 }

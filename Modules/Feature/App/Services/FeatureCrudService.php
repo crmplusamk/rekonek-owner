@@ -6,7 +6,7 @@ use Illuminate\Support\Str;
 use Modules\Feature\App\Models\Feature;
 
 /**
- * CRUD fitur (leaf, is_parent=false) — service pattern. Menggantikan FeatureRepository untuk tulis.
+ * CRUD fitur (leaf, is_parent=false) — service pattern. Operasi tulis fitur.
  */
 class FeatureCrudService
 {

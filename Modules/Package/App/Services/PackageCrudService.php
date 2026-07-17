@@ -7,12 +7,18 @@ use Modules\Feature\App\Models\Feature;
 use Modules\Package\App\Models\Package;
 
 /**
- * CRUD paket + aturan `package_feature`. Menggantikan peran PackageRepository untuk operasi tulis
- * (service pattern). Membangun baris pivot dari kontrak field form: visiblity[]/include[]/
+ * CRUD paket + aturan `package_feature` (service pattern). Membangun baris pivot dari kontrak
+ * field form: visiblity[]/include[]/
  * limit_option[]/limit[]/limit_type[] dikunci per feature_id.
  */
 class PackageCrudService
 {
+    /** Ambil paket master by id (dipakai lintas module oleh Checkout). */
+    public function getById($id): Package
+    {
+        return Package::findOrFail($id);
+    }
+
     public function create(array $data): Package
     {
         return DB::transaction(function () use ($data) {

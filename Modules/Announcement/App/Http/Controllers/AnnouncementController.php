@@ -9,13 +9,13 @@ use Illuminate\Support\Facades\DB;
 use Modules\Announcement\App\Http\Requests\AnnouncementStoreRequest;
 use Modules\Announcement\App\Http\Requests\AnnouncementUpdateRequest;
 use Modules\Announcement\App\Models\Announcement;
-use Modules\Announcement\App\Repositories\AnnouncementRepository;
 use Modules\Announcement\App\Services\AnnouncementPublishService;
+use Modules\Announcement\App\Services\AnnouncementService;
 
 class AnnouncementController extends Controller
 {
     public function __construct(
-        protected AnnouncementRepository $announcementRepo,
+        protected AnnouncementService $announcementService,
         protected AnnouncementPublishService $publishService,
     ) {
     }
@@ -40,7 +40,7 @@ class AnnouncementController extends Controller
             $result = $this->publishService->resolvePublication(
                 $payload,
                 $targets,
-                $this->announcementRepo->getOverlappingAnnouncements($payload)
+                $this->announcementService->getOverlappingAnnouncements($payload)
             );
 
             $announcement = Announcement::create([
@@ -51,7 +51,7 @@ class AnnouncementController extends Controller
                 'updated_by' => auth()->id(),
             ]);
 
-            $this->announcementRepo->syncTargets($announcement, $result->targets);
+            $this->announcementService->syncTargets($announcement, $result->targets);
 
             DB::commit();
 
@@ -77,7 +77,7 @@ class AnnouncementController extends Controller
     public function edit($id)
     {
         try {
-            $announcement = $this->announcementRepo->detail($id);
+            $announcement = $this->announcementService->detail($id);
             $companyIds = $announcement->targets
                 ->where('target_type', Announcement::TARGET_COMPANY)
                 ->pluck('target_value')
@@ -88,7 +88,7 @@ class AnnouncementController extends Controller
             $selectedCompanies = $announcement->targets
                 ->where('target_type', Announcement::TARGET_COMPANY);
 
-            $selectedCompanies = $this->announcementRepo->companiesByIds($companyIds)
+            $selectedCompanies = $this->announcementService->companiesByIds($companyIds)
                 ->map(fn ($company) => [
                     'id' => $company->company_id,
                     'text' => $company->name,
@@ -108,13 +108,13 @@ class AnnouncementController extends Controller
         DB::beginTransaction();
 
         try {
-            $announcement = $this->announcementRepo->getById($id);
+            $announcement = $this->announcementService->getById($id);
             $payload = $this->normalizePayload($request);
             $targets = $this->normalizeTargets($request);
             $result = $this->publishService->resolvePublication(
                 $payload,
                 $targets,
-                $this->announcementRepo->getOverlappingAnnouncements($payload, $announcement->id)
+                $this->announcementService->getOverlappingAnnouncements($payload, $announcement->id)
             );
 
             $announcement->update([
@@ -124,7 +124,7 @@ class AnnouncementController extends Controller
                 'updated_by' => auth()->id(),
             ]);
 
-            $this->announcementRepo->syncTargets($announcement, $result->targets);
+            $this->announcementService->syncTargets($announcement, $result->targets);
 
             DB::commit();
 
@@ -145,7 +145,7 @@ class AnnouncementController extends Controller
     public function destroy($id)
     {
         try {
-            $announcement = $this->announcementRepo->getById($id);
+            $announcement = $this->announcementService->getById($id);
             $announcement->targets()->delete();
             $announcement->forceDelete();
 
@@ -161,13 +161,13 @@ class AnnouncementController extends Controller
 
     public function datatable(Request $request)
     {
-        return $this->announcementRepo->datatable();
+        return $this->announcementService->datatable();
     }
 
     public function companies(Request $request)
     {
         return response()->json([
-            'data' => $this->announcementRepo->companyOptions($request->get('search')),
+            'data' => $this->announcementService->companyOptions($request->get('search')),
         ]);
     }
 

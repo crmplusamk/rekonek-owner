@@ -7,16 +7,16 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Modules\Addon\App\Repositories\AddonRepository;
+use Modules\Addon\App\Services\AddonCrudService;
 use Modules\Checkout\App\Services\MidtransService;
-use Modules\Customer\App\Repositories\CustomerRepository;
+use Modules\Customer\App\Services\CustomerService;
 use Modules\PromoCode\App\Models\PromoCode;
 use Modules\PromoCode\App\Models\PromoCodeUsage;
-use Modules\Invoices\App\Repositories\InvoiceRepository;
+use Modules\Invoices\App\Services\InvoiceService;
 use Modules\Logs\App\Services\LogService;
-use Modules\Package\App\Repositories\PackageRepository;
+use Modules\Package\App\Services\PackageCrudService;
 use Modules\Package\App\Services\PackageService;
-use Modules\Payment\App\Repositories\PaymentRepository;
+use Modules\Payment\App\Services\PaymentService;
 use Modules\Subscription\App\Models\SubscriptionAddon;
 use Modules\Subscription\App\Models\SubscriptionPackage;
 use Modules\Subscription\App\Services\SubscriptionService;
@@ -24,19 +24,19 @@ use App\Jobs\SendThankYouSubscribedMailJob;
 
 class CheckoutApiController extends Controller
 {
-    public $customerRepo, $packageRepo, $addonRepo, $invoiceRepo, $paymentRepo, $packageSrv, $midtransSrv, $subscriptionSrv;
+    public $customerService, $packageCrud, $addonCrud, $invoiceService, $paymentService, $packageSrv, $midtransSrv, $subscriptionSrv;
 
-    public function __construct(CustomerRepository $customerRepo,
-        PackageRepository $packageRepo, AddonRepository $addonRepo,
-        InvoiceRepository $invoiceRepo, PaymentRepository $paymentRepo,
+    public function __construct(CustomerService $customerService,
+        PackageCrudService $packageCrud, AddonCrudService $addonCrud,
+        InvoiceService $invoiceService, PaymentService $paymentService,
         PackageService $packageSrv, MidtransService $midtransSrv,
         SubscriptionService $subscriptionSrv)
     {
-        $this->customerRepo = $customerRepo;
-        $this->packageRepo = $packageRepo;
-        $this->addonRepo = $addonRepo;
-        $this->invoiceRepo = $invoiceRepo;
-        $this->paymentRepo = $paymentRepo;
+        $this->customerService = $customerService;
+        $this->packageCrud = $packageCrud;
+        $this->addonCrud = $addonCrud;
+        $this->invoiceService = $invoiceService;
+        $this->paymentService = $paymentService;
         $this->packageSrv = $packageSrv;
         $this->midtransSrv = $midtransSrv;
         $this->subscriptionSrv = $subscriptionSrv;
@@ -54,12 +54,12 @@ class CheckoutApiController extends Controller
             $subtotal = 0;
 
             /** verify customer */
-            $customer = $this->customerRepo->getByCompanyId($request->company_id);
+            $customer = $this->customerService->getByCompanyId($request->company_id);
 
             /** verify items */
             foreach($request->items as $item)
             {
-                $repo = $item['item'] == 'package' ? $this->packageRepo : $this->addonRepo;
+                $repo = $item['item'] == 'package' ? $this->packageCrud : $this->addonCrud;
                 $data = $repo->getById($item['id']);
                 if (!$data) break;
 
@@ -123,7 +123,7 @@ class CheckoutApiController extends Controller
                 $invoicePayload['promo_code_id'] = $appliedPromoCode->id;
                 $invoicePayload['promo_usage_status'] = $request->boolean('is_renew') ? 'P' : 'B'; // P = perpanjangan, B = register/baru
             }
-            $invoice = $this->invoiceRepo->create($invoicePayload);
+            $invoice = $this->invoiceService->create($invoicePayload);
 
             $totalAmount = (int) $calculate['total'];
             if ($totalAmount <= 0) {
@@ -193,7 +193,7 @@ class CheckoutApiController extends Controller
         try {
 
             /** verify customer */
-            $customer = $this->customerRepo->getByCompanyId($request->company_id);
+            $customer = $this->customerService->getByCompanyId($request->company_id);
 
             /** Check active subscription - only subscribers can buy addon */
             $activeSubscription = SubscriptionPackage::forCompany($request->company_id)
@@ -214,7 +214,7 @@ class CheckoutApiController extends Controller
             /** verify items */
             foreach($request->items as $item)
             {
-                $data = $this->addonRepo->getById($item['id']);
+                $data = $this->addonCrud->getById($item['id']);
                 if (!$data) break;
 
                 $dataItems = $this->packageSrv->addonItem($data, $item);
@@ -277,7 +277,7 @@ class CheckoutApiController extends Controller
                 $invoicePayload['promo_code_id'] = $appliedPromoCode->id;
                 $invoicePayload['promo_usage_status'] = $request->boolean('is_renew') ? 'P' : 'B';
             }
-            $invoice = $this->invoiceRepo->create($invoicePayload);
+            $invoice = $this->invoiceService->create($invoicePayload);
 
             $totalAmount = (int) $calculate['total'];
             if ($totalAmount <= 0) {
@@ -345,7 +345,7 @@ class CheckoutApiController extends Controller
     {
         try {
 
-            $invoice = $this->invoiceRepo->findUnpaidById($request->invoice_id);
+            $invoice = $this->invoiceService->findUnpaidById($request->invoice_id);
             if (!$invoice) return response()->json(["error" => true, "message" => "Not Found"], 404);
 
             /** cancel payment */
@@ -378,7 +378,7 @@ class CheckoutApiController extends Controller
     {
         try {
 
-            $invoice = $this->invoiceRepo->findUnpaidById($request->invoice_id);
+            $invoice = $this->invoiceService->findUnpaidById($request->invoice_id);
             if (!$invoice) return response()->json(["error" => true, "message" => "Not Found"], 404);
             if ($invoice->due_date && Carbon::parse($invoice->due_date)->isBefore(Carbon::today())) {
                 return response()->json(["error" => true, "message" => "Invoice telah expired"], 422);
@@ -397,7 +397,7 @@ class CheckoutApiController extends Controller
                 $setOrder->limit
             );
 
-            $dataPayment = $this->paymentRepo->create([
+            $dataPayment = $this->paymentService->create([
                 'invoice_id' => $invoice->id,
                 'order_id' => $setOrder->orderId,
                 'date' => now(),
@@ -441,7 +441,7 @@ class CheckoutApiController extends Controller
     {
         DB::beginTransaction();
         try {
-            $payment = $this->paymentRepo->findById($request->payment_id);
+            $payment = $this->paymentService->findById($request->payment_id);
             if (!$payment) return response()->json(["error" => true, "message" => "Not Found"], 404);
             if (! in_array((int) $payment->is_status, [0, 1], true)) {
                 return response()->json(["error" => true, "message" => "Payment tidak dapat dibatalkan"], 422);
@@ -451,7 +451,7 @@ class CheckoutApiController extends Controller
                 $this->midtransSrv->cancelOrder($payment->order_id);
             }
 
-            $this->paymentRepo->update($payment, [
+            $this->paymentService->update($payment, [
                 'is_status' => 3,
                 'note' => $payment->method ? 'Dibatalkan dari aplikasi dan Midtrans' : 'Dibatalkan dari aplikasi',
             ]);
@@ -530,7 +530,7 @@ class CheckoutApiController extends Controller
 
             $status = $request->transaction_status;
             $orderId = explode("-", $request->order_id);
-            $invoice = $this->invoiceRepo->findByCode($orderId[0]);
+            $invoice = $this->invoiceService->findByCode($orderId[0]);
 
             if ($status == 'pending') {
                 /** pending invoice payment */
@@ -573,7 +573,7 @@ class CheckoutApiController extends Controller
             ->locale('id')
             ->translatedFormat('d F Y, H:i');
 
-        $this->invoiceRepo->update($invoice, [
+        $this->invoiceService->update($invoice, [
             'is_paid' => 1,
             'is_status' => 2,
             'payment_total' => $invoice->total,
@@ -616,8 +616,8 @@ class CheckoutApiController extends Controller
             ]);
 
             // Prepaid AI Credit: perpanjang expired_at addon aktif ke cycle baru agar saldo
-            // carry-over saat perpanjangan (lihat SubscriptionService::extendAiCreditAddonExpiry).
-            $this->subscriptionSrv->extendAiCreditAddonExpiry($invoice->company_id, $dataSubsPackage->expired_at);
+            // carry-over saat perpanjangan (lihat SubscriptionService::extendOneTimeAddonExpiry).
+            $this->subscriptionSrv->extendOneTimeAddonExpiry($invoice->company_id, $dataSubsPackage->expired_at);
         }
 
         foreach ($subsAddons as $subsAddon) {
@@ -635,7 +635,7 @@ class CheckoutApiController extends Controller
                 'expired_at' => $existingSubs ? $existingSubs->expired_at : $subsAddon->end_date,
                 'is_active' => true,
                 'company_id' => $invoice->company_id
-            ]);
+            ], $invoiceType === 'renew');
             $logTitle = $invoiceType === 'addon' ? 'Menambahkan Addon' : 'Menambahkan Addon (Paket Baru)';
             LogService::create([
                 'fid' => $dataSubsAddon->id,
@@ -714,10 +714,10 @@ class CheckoutApiController extends Controller
 
     private function paymentPending($invoice, $request)
     {
-        $payment = $this->paymentRepo->findByOrderId($request->order_id);
+        $payment = $this->paymentService->findByOrderId($request->order_id);
 
         /** update payments */
-        $this->paymentRepo->update($payment, [
+        $this->paymentService->update($payment, [
             'order_id' => $request->order_id,
             'method' => $request->payment_type,
             'total' => $request->gross_amount,
@@ -755,7 +755,7 @@ class CheckoutApiController extends Controller
             ->translatedFormat('d F Y, H:i');
 
         /** update invoice status */
-        $this->invoiceRepo->update($invoice, [
+        $this->invoiceService->update($invoice, [
             "is_paid" => 1,
             "is_status" => 2,
             "payment_total" => $invoice->payment_total + $request->gross_amount,
@@ -764,8 +764,8 @@ class CheckoutApiController extends Controller
         ]);
 
         /** get payment and update payment status */
-        $payment = $this->paymentRepo->findByOrderId($request->order_id);
-        $this->paymentRepo->update($payment, [
+        $payment = $this->paymentService->findByOrderId($request->order_id);
+        $this->paymentService->update($payment, [
             "paid_date" => $paymentDate,
             "method" => $request->payment_type,
             "is_status" => 2, /** paid */
@@ -821,8 +821,8 @@ class CheckoutApiController extends Controller
             ]);
 
             // Prepaid AI Credit: perpanjang expired_at addon aktif ke cycle baru agar saldo
-            // carry-over saat perpanjangan (lihat SubscriptionService::extendAiCreditAddonExpiry).
-            $this->subscriptionSrv->extendAiCreditAddonExpiry($invoice->company_id, $dataSubsPackage->expired_at);
+            // carry-over saat perpanjangan (lihat SubscriptionService::extendOneTimeAddonExpiry).
+            $this->subscriptionSrv->extendOneTimeAddonExpiry($invoice->company_id, $dataSubsPackage->expired_at);
         }
 
         /** create/update addon subscription */
@@ -843,7 +843,7 @@ class CheckoutApiController extends Controller
                     'expired_at' => $existingSubs ? $existingSubs->expired_at : $subsAddon->end_date,
                     'is_active' => true,
                     'company_id' => $invoice->company_id
-                ]);
+                ], $invoiceType === 'renew');
 
                 $logTitle = $invoiceType === 'addon' ? 'Menambahkan Addon' : 'Menambahkan Addon (Paket Baru)';
                 LogService::create([
@@ -869,7 +869,7 @@ class CheckoutApiController extends Controller
     private function paymentError($request, $status)
     {
         /** get payment and update payment status */
-        $payment = $this->paymentRepo->findByOrderId($request->order_id);
+        $payment = $this->paymentService->findByOrderId($request->order_id);
 
         $is_status = [
             'cancel' => [
@@ -886,7 +886,7 @@ class CheckoutApiController extends Controller
             ],
         ];
 
-        $this->paymentRepo->update($payment, [
+        $this->paymentService->update($payment, [
             "is_status" => $is_status[$status]['int'] ?? 9,
             "metadata" => json_encode($request->all()),
         ]);
@@ -906,7 +906,7 @@ class CheckoutApiController extends Controller
      */
     private function paymentStore($invoice, $setOrder, $token)
     {
-        $payment = $this->paymentRepo->create([
+        $payment = $this->paymentService->create([
             'invoice_id' => $invoice->id,
             'order_id' => $setOrder->orderId,
             'date' => now(),

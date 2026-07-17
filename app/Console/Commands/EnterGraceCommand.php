@@ -54,7 +54,7 @@ class EnterGraceCommand extends Command
         $candidates = $lifecycle->findEnterGraceCandidates($today, $companyIdFilter);
 
         if ($candidates->isEmpty()) {
-            $this->info('No subscriptions to enter grace (expired yesterday AND is_grace=active).');
+            $this->info('No subscriptions to enter grace (expired within lookback window AND is_grace=active).');
 
             return self::SUCCESS;
         }

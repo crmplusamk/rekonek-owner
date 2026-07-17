@@ -1,12 +1,12 @@
 <?php
 
-namespace Modules\User\App\Repositories;
+namespace Modules\User\App\Services;
 
 use Illuminate\Support\Facades\Hash;
 use Modules\Privilege\App\Models\Role;
 use Modules\User\App\Models\User;
 
-class UserRepository
+class UserService
 {
     public function create($request)
     {
