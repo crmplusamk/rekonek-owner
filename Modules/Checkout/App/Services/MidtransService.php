@@ -60,13 +60,135 @@ class MidtransService
         return $token;
     }
 
+    /**
+     * Charge QRIS langsung via Core API (tanpa Snap) — instruksi pembayaran (QR) tampil
+     * inline di aplikasi. `order_id` HARUS memakai format `setOrder()` (`{code}-{ts}`) agar
+     * webhook `paymentCallback` bisa memetakan balik ke invoice via `explode('-')[0]`.
+     *
+     * @return array{order_id:string, transaction_id:?string, transaction_status:?string, qr_url:?string, qr_string:?string, expiry_time:?string, raw:object}
+     */
+    public function chargeQris($invoice, $orderId, string $unit = 'minute', int $expiryDuration = 15): array
+    {
+        $params = [
+            "payment_type" => "qris",
+            "transaction_details" => [
+                "order_id" => $orderId,
+                "gross_amount" => (int) $invoice->total,
+            ],
+            "item_details" => [
+                [
+                    "id" => $invoice->code,
+                    "name" => "Pembayaran Invoice " . $invoice->code,
+                    "quantity" => 1,
+                    "price" => (int) $invoice->total,
+                ]
+            ],
+            "customer_details" => [
+                "first_name" => $invoice->customer_name,
+                "email" => $invoice->customer_email,
+                "phone" => $invoice->customer_phone,
+            ],
+            "custom_expiry" => [
+                "expiry_duration" => $expiryDuration,
+                "unit" => $unit,
+            ],
+        ];
+
+        $response = \Midtrans\CoreApi::charge($params);
+
+        // URL gambar QR = action bernama 'generate-qr-code'.
+        $qrUrl = null;
+        if (isset($response->actions) && is_array($response->actions)) {
+            foreach ($response->actions as $action) {
+                if (($action->name ?? null) === 'generate-qr-code') {
+                    $qrUrl = $action->url ?? null;
+                    break;
+                }
+            }
+        }
+
+        return [
+            "order_id" => $response->order_id ?? $orderId,
+            "transaction_id" => $response->transaction_id ?? null,
+            "transaction_status" => $response->transaction_status ?? null,
+            "qr_url" => $qrUrl,
+            "qr_string" => $response->qr_string ?? null,
+            "expiry_time" => $response->expiry_time ?? null,
+            "raw" => $response,
+        ];
+    }
+
+    /**
+     * Charge Virtual Account (bank_transfer) via Core API — nomor VA tampil inline di aplikasi.
+     * `order_id` HARUS memakai format `setOrder()` (`{code}-{ts}`) agar webhook bisa memetakan invoice.
+     * Bank didukung: bca, bni, bri (via `bank_transfer.bank` → `va_numbers`), permata (→ `permata_va_number`).
+     *
+     * @return array{order_id:string, transaction_status:?string, bank:string, va_number:?string, expiry_time:?string, raw:object}
+     */
+    public function chargeBankTransfer($invoice, $orderId, string $bank, string $unit = 'minute', int $expiryDuration = 1440): array
+    {
+        $params = [
+            "payment_type" => "bank_transfer",
+            "transaction_details" => [
+                "order_id" => $orderId,
+                "gross_amount" => (int) $invoice->total,
+            ],
+            "item_details" => [
+                [
+                    "id" => $invoice->code,
+                    "name" => "Pembayaran Invoice " . $invoice->code,
+                    "quantity" => 1,
+                    "price" => (int) $invoice->total,
+                ]
+            ],
+            "customer_details" => [
+                "first_name" => $invoice->customer_name,
+                "email" => $invoice->customer_email,
+                "phone" => $invoice->customer_phone,
+            ],
+            "bank_transfer" => [
+                "bank" => $bank,
+            ],
+            "custom_expiry" => [
+                "expiry_duration" => $expiryDuration,
+                "unit" => $unit,
+            ],
+        ];
+
+        $response = \Midtrans\CoreApi::charge($params);
+
+        $vaNumber = null;
+        $vaBank = $bank;
+        if (isset($response->va_numbers) && is_array($response->va_numbers) && count($response->va_numbers) > 0) {
+            $vaNumber = $response->va_numbers[0]->va_number ?? null;
+            $vaBank = $response->va_numbers[0]->bank ?? $bank;
+        } elseif (isset($response->permata_va_number)) {
+            $vaNumber = $response->permata_va_number;
+            $vaBank = 'permata';
+        }
+
+        return [
+            "order_id" => $response->order_id ?? $orderId,
+            "transaction_status" => $response->transaction_status ?? null,
+            "bank" => $vaBank,
+            "va_number" => $vaNumber,
+            "expiry_time" => $response->expiry_time ?? null,
+            "raw" => $response,
+        ];
+    }
+
     public function validateSignature($params)
     {
         $serverKey = config("midtrans.serverKey");
-        $hashed = hash("sha512", $params['order_id'].$params['status_code'].$params['gross_amount'].$serverKey);
-        if (!$hashed == $params['signature_key']) return false;
+        $signatureKey = $params['signature_key'] ?? null;
+        if (empty($signatureKey)) return false;
 
-        return true;
+        $hashed = hash("sha512", $params['order_id'].$params['status_code'].$params['gross_amount'].$serverKey);
+
+        // Timing-safe compare. NOTE: precedence bug lama `!$hashed == $signature_key`
+        // di-parse sebagai `(!$hashed) == $signature_key` sehingga signature tidak
+        // pernah benar-benar diverifikasi (webhook bisa dipalsukan).
+        return hash_equals($hashed, $signatureKey);
     }
 
     public function invoiceItems($items, $invoice)

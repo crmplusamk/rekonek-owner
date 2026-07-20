@@ -12,13 +12,11 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Modules\Addon\App\Models\Addon;
 use Modules\Customer\App\Services\CustomerService;
 use Modules\Invoices\App\Services\InvoiceService;
-use Modules\Package\App\Models\Package;
 use Modules\Package\App\Services\PackageService;
-use Modules\Subscription\App\Models\SubscriptionAddon;
 use Modules\Subscription\App\Models\SubscriptionPackage;
+use Modules\Subscription\App\Services\RenewalQuoteService;
 
 class GenerateRenewalInvoiceJob implements ShouldQueue, ShouldBeUnique
 {
@@ -85,94 +83,19 @@ class GenerateRenewalInvoiceJob implements ShouldQueue, ShouldBeUnique
                 return;
             }
 
-            $items = [];
-            $subtotal = 0;
+            /** Hitung item & total via sumber kebenaran tunggal (RenewalQuoteService) */
+            $quote = app(RenewalQuoteService::class)->quoteForSubscription($subsPackage);
 
-            /** Build package item */
-            $package = $subsPackage->package;
-            if (!$package) {
-                Log::error('GenerateRenewalInvoiceJob: Package not found', [
+            if (!$quote || empty($quote['items'])) {
+                Log::error('GenerateRenewalInvoiceJob: Quote/package not found', [
                     'subscription_package_id' => $subsPackage->id,
                 ]);
                 DB::rollBack();
                 return;
             }
 
-            $termin = $subsPackage->termin ?? 'month';
-            $terminDuration = $subsPackage->termin_duration ?? 1;
-
-            if ($termin === 'monthly') $termin = 'month';
-            if ($termin === 'yearly') $termin = 'year';
-
-            $packagePrice = $this->calculatePackagePrice($package->price, $termin);
-
-            $items[] = [
-                'modelable_id' => $package->id,
-                'modelable_type' => Package::class,
-                'duration' => $terminDuration,
-                'duration_type' => $termin,
-                'termin' => $termin,
-                'termin_duration' => $terminDuration,
-                'quantity' => 1,
-                'price' => $packagePrice,
-                'subtotal' => $packagePrice,
-                'start_date' => $subsPackage->expired_at,
-                'end_date' => Carbon::parse($subsPackage->expired_at)
-                    ->add($terminDuration, $termin . 's')
-                    ->format('Y-m-d H:i:s'),
-            ];
-
-            $subtotal += $packagePrice;
-
-            /** Build addon items */
-            $subscriptionAddons = SubscriptionAddon::where('company_id', $subsPackage->company_id)
-                ->where('is_active', true)
-                ->whereDate('expired_at', '>=', Carbon::now())
-                ->with('addon')
-                ->get();
-
-            foreach ($subscriptionAddons as $subsAddon) {
-                $addon = $subsAddon->addon;
-                if (!$addon) continue;
-
-                $addonPrice = $this->calculateAddonPrice($addon->price, $termin);
-
-                // subscription_addons.charge = total UNIT; harga & subtotal dihitung per BLOK.
-                // Ukuran blok = addons.charge (Nomor WA/CS Agent = 1, MAU/AI Credit = 1000).
-                // Jumlah blok = unit / ukuran_blok. Bandingkan PackageService::addonItem (checkout
-                // awal) yang menyimpan quantity=blok & charge=blok×ukuran_blok. Bug sebelumnya:
-                // quantity = charge (unit) → subtotal 1000× lipat untuk addon berukuran-blok.
-                $blockSize = max(1, (int) $addon->charge);
-                $units = max(1, (int) ($subsAddon->charge ?? 1));
-                $blocks = max(1, intdiv($units, $blockSize));
-
-                $items[] = [
-                    'modelable_id' => $addon->id,
-                    'modelable_type' => Addon::class,
-                    'duration' => $terminDuration,
-                    'duration_type' => $termin,
-                    'termin' => $termin,
-                    'termin_duration' => $terminDuration,
-                    'quantity' => $blocks,
-                    'charge' => $units,              // TETAP unit — dibaca settlement (updateAddon)
-                    'price' => $addonPrice,
-                    'subtotal' => $addonPrice * $blocks,
-                    'start_date' => $subsPackage->expired_at,
-                    'end_date' => Carbon::parse($subsPackage->expired_at)
-                        ->add($terminDuration, $termin . 's')
-                        ->format('Y-m-d H:i:s'),
-                ];
-
-                $subtotal += $addonPrice * $blocks;
-            }
-
-            if (empty($items)) {
-                Log::info('GenerateRenewalInvoiceJob: No items to invoice, skipping', [
-                    'company_id' => $subsPackage->company_id,
-                ]);
-                DB::rollBack();
-                return;
-            }
+            $items = $quote['items'];
+            $subtotal = $quote['subtotal'];
 
             /** Calculate & create invoice */
             $calculate = $packageSrv->calculateTotal($subtotal);
@@ -235,25 +158,4 @@ class GenerateRenewalInvoiceJob implements ShouldQueue, ShouldBeUnique
         }
     }
 
-    private function calculatePackagePrice($monthlyPrice, $termin)
-    {
-        if ($termin === 'month' || $termin === 'monthly') {
-            return $monthlyPrice;
-        }
-
-        $yearlyTotal = $monthlyPrice * 12;
-        $discount = ($yearlyTotal * 20) / 100;
-        $yearlyWithDiscount = $yearlyTotal - $discount;
-
-        return floor($yearlyWithDiscount / 1000) * 1000;
-    }
-
-    private function calculateAddonPrice($monthlyPrice, $termin)
-    {
-        if ($termin === 'month' || $termin === 'monthly') {
-            return $monthlyPrice;
-        }
-
-        return $monthlyPrice * 12;
-    }
 }
