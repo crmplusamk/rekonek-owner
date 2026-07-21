@@ -5,6 +5,9 @@
     <a class="dropdown-item pointer" data-toggle="modal" data-target="#edit-{{ $addon->id }}">
         <i class="mdi mdi-pencil"></i> Edit
     </a>
+    <a class="dropdown-item pointer" href="{{ route('addon.tier.index', $addon->id) }}">
+        <i class="mdi mdi-sale"></i> Aturan Diskon
+    </a>
     <a class="dropdown-item pointer" data-toggle="modal" data-target="#is-active-{{ $addon->id }}">
         <i class="mdi mdi-{{ $addon->is_active ? "close" : "check" }}"></i> {{ $addon->is_active ? "Nonaktifkan" : "Aktifkan" }}
     </a>

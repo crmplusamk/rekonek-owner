@@ -39,6 +39,7 @@ class CheckoutService
         private PaymentService $paymentService,
         private MidtransService $midtransSrv,
         private SubscriptionService $subscriptionSrv,
+        private \Modules\Package\App\Services\PricingService $pricingSrv,
     ) {
     }
 
@@ -70,7 +71,7 @@ class CheckoutService
             }
 
             /** bangun item + tentukan komposisi (ada paket / addon-only) */
-            [$items, $subtotal, $hasPackage] = $this->buildItems($data['items']);
+            [$items, $subtotal, $hasPackage] = $this->buildItems($data['items'], $companyId);
 
             /** gate: pembelian addon-only wajib punya langganan aktif non-trial */
             if (! $hasPackage) {
@@ -188,7 +189,7 @@ class CheckoutService
      *
      * @throws CheckoutException ITEM_NOT_FOUND
      */
-    private function buildItems(array $rawItems): array
+    private function buildItems(array $rawItems, string $companyId): array
     {
         $items = [];
         $subtotal = 0;
@@ -204,6 +205,14 @@ class CheckoutService
             }
 
             $normalized = $this->normalizeItem($raw);
+
+            // HARGA OTORITATIF server-side — abaikan harga dari client (PricingService sumber tunggal).
+            $qty = max(1, (int) ($normalized['quantity'] ?? 1));
+            $termin = $normalized['termin'] ?? 'month';
+            $normalized['price'] = $type === 'package'
+                ? $this->pricingSrv->packagePrice((float) $model->price, $termin)
+                : $this->pricingSrv->addonUnitPrice($model, $termin, $qty, $companyId);
+
             $line = $type === 'package'
                 ? $this->packageSrv->packageItem($model, $normalized)
                 : $this->packageSrv->addonItem($model, $normalized);

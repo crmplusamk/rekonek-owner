@@ -43,4 +43,10 @@ class Addon extends Model
     {
         return $this->hasMany(SubscriptionAddon::class, 'addon_id', 'id');
     }
+
+    /** Aturan diskon (price tier) milik addon ini, urut min_quantity naik. Untuk CRUD admin saja. */
+    public function priceTiers()
+    {
+        return $this->hasMany(AddonPriceTier::class, 'addon_id', 'id')->orderBy('min_quantity');
+    }
 }

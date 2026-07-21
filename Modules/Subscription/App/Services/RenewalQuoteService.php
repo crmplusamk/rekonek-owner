@@ -22,9 +22,15 @@ use Modules\Subscription\App\Models\SubscriptionPackage;
  * - subscription_addons.charge = total UNIT; ukuran blok = addons.charge
  *   (Nomor WA/CS Agent = 1, MAU/AI Credit = 1000). blocks = unit ÷ ukuran_blok.
  * - Hanya addon is_active && expired_at >= hari ini yang ikut ditagih.
+ * - Addon billing_type='onetime' (AI Credit / prepaid) DIKECUALIKAN dari tagihan renewal
+ *   (sekali beli, saldo carry-over). Hanya addon recurring yang di-rebill.
  */
 class RenewalQuoteService
 {
+    public function __construct(private \Modules\Package\App\Services\PricingService $pricingSrv)
+    {
+    }
+
     /**
      * Quote untuk company (pakai langganan efektif yang dipakai app: activeResolved).
      */
@@ -67,7 +73,7 @@ class RenewalQuoteService
         $subtotal = 0;
 
         /** package item */
-        $packagePrice = $this->calculatePackagePrice((float) $package->price, $termin);
+        $packagePrice = $this->pricingSrv->packagePrice((float) $package->price, $termin);
         $items[] = [
             'modelable_id' => $package->id,
             'modelable_type' => Package::class,
@@ -83,11 +89,21 @@ class RenewalQuoteService
         ];
         $subtotal += $packagePrice;
 
-        /** addon items (aktif & belum kadaluarsa) */
+        /**
+         * Addon items (aktif & belum kadaluarsa) yang DITAGIH saat renewal.
+         * Addon `onetime` (AI Credit / prepaid) DIKECUALIKAN — sekali beli, saldo carry-over,
+         * tidak ditagih ulang tiap perpanjangan. Masa berlakunya tetap diperpanjang co-terminous
+         * dengan paket via SubscriptionService::extendOneTimeAddonExpiry saat settlement.
+         */
         $addonSummaries = [];
         $subscriptionAddons = SubscriptionAddon::where('company_id', $subsPackage->company_id)
             ->where('is_active', true)
             ->whereDate('expired_at', '>=', Carbon::now())
+            ->whereHas('addon', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->where('billing_type', '!=', 'onetime')->orWhereNull('billing_type');
+                });
+            })
             ->with('addon.feature')
             ->get();
 
@@ -97,10 +113,11 @@ class RenewalQuoteService
                 continue;
             }
 
-            $addonPrice = $this->calculateAddonPrice((float) $addon->price, $termin);
             $blockSize = max(1, (int) $addon->charge);
             $units = max(1, (int) ($subsAddon->charge ?? 1));
             $blocks = max(1, intdiv($units, $blockSize));
+            // Harga per blok termin-aware + tier diskon (bila ada), via sumber tunggal PricingService.
+            $addonPrice = $this->pricingSrv->addonUnitPrice($addon, $termin, $blocks, $subsPackage->company_id);
             $lineSubtotal = $addonPrice * $blocks;
 
             $items[] = [
@@ -157,27 +174,5 @@ class RenewalQuoteService
         if ($termin === 'yearly') return 'year';
 
         return $termin;
-    }
-
-    /** Paket: bulanan = price; tahunan = price×12 − 20%, floor ke ribuan. */
-    public function calculatePackagePrice(float $monthlyPrice, string $termin): float
-    {
-        if ($termin === 'month' || $termin === 'monthly') {
-            return $monthlyPrice;
-        }
-
-        $yearlyWithDiscount = ($monthlyPrice * 12) - (($monthlyPrice * 12) * 20 / 100);
-
-        return floor($yearlyWithDiscount / 1000) * 1000;
-    }
-
-    /** Addon: bulanan = price per blok; tahunan = price×12 (tanpa diskon). */
-    public function calculateAddonPrice(float $monthlyPrice, string $termin): float
-    {
-        if ($termin === 'month' || $termin === 'monthly') {
-            return $monthlyPrice;
-        }
-
-        return $monthlyPrice * 12;
     }
 }
