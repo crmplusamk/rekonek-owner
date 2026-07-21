@@ -6,16 +6,16 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Modules\Privilege\App\Models\Role;
-use Modules\User\App\Repositories\UserRepository;
+use Modules\User\App\Services\UserService;
 
 class UserController extends Controller
 {
 
-    public $userRepo;
+    public $userService;
 
-    public function __construct(UserRepository $userRepo)
+    public function __construct(UserService $userService)
     {
-        $this->userRepo = $userRepo;
+        $this->userService = $userService;
     }
     /**
      * Display a listing of the resource.
@@ -50,7 +50,7 @@ class UserController extends Controller
         DB::beginTransaction();
         try {
 
-            $this->userRepo->create($request->all());
+            $this->userService->create($request->all());
 
             DB::commit();
             notify()->success("Berhasil membuat data user");
@@ -71,7 +71,7 @@ class UserController extends Controller
     {
         try {
 
-            $data =  $this->userRepo->detail($id);
+            $data =  $this->userService->detail($id);
             return view('user::show', compact('data'));
 
         } catch (\Exception $e) {
@@ -88,7 +88,7 @@ class UserController extends Controller
     {
         try {
 
-            $data =  $this->userRepo->detail($id);
+            $data =  $this->userService->detail($id);
             $roles = Role::get();
 
             return view('user::edit', compact('data', 'roles'));
@@ -107,7 +107,7 @@ class UserController extends Controller
     {
         try {
 
-            $this->userRepo->update($request->all(), $id);
+            $this->userService->update($request->all(), $id);
 
             notify()->success("Berhasil mengubah data user");
             return to_route('user.index');
@@ -127,7 +127,7 @@ class UserController extends Controller
     {
         try {
 
-            $user = $this->userRepo->delete($id);
+            $user = $this->userService->delete($id);
 
             if ($user != 403) {
                 notify()->success("Berhasil menghapus data user");
@@ -148,7 +148,7 @@ class UserController extends Controller
     {
         try {
 
-            $this->userRepo->status($id);
+            $this->userService->status($id);
 
             notify()->success("Berhasil mengubah data user");
             return to_route('user.index');
@@ -162,6 +162,6 @@ class UserController extends Controller
 
     public function datatable(Request $request)
     {
-        return $this->userRepo->datatable();
+        return $this->userService->datatable();
     }
 }

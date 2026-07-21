@@ -136,12 +136,17 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link" id="invoice-tab" data-toggle="pill" href="#invoice-content" role="tab" aria-controls="invoice-content" aria-selected="false">
-                    Invoice & Langganan
+                    Invoice
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" id="onboarding-tab" data-toggle="pill" href="#onboarding-content" role="tab" aria-controls="onboarding-content" aria-selected="false">
-                    Data Onboarding
+                    Onboarding
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="subscription-tab" data-toggle="pill" href="#subscription-content" role="tab" aria-controls="subscription-content" aria-selected="false">
+                    Langganan
                 </a>
             </li>
         </ul>
@@ -417,6 +422,78 @@
                 </div>
                 @endif
             </div>{{-- End Data Onboarding Tab --}}
+
+            {{-- Langganan Tab --}}
+            <div class="tab-pane fade" id="subscription-content" role="tabpanel" aria-labelledby="subscription-tab">
+                @if($data['subscriptions'] && $data['subscriptions']->count() > 0)
+                    <div class="table-responsive">
+                        <table class="table" id="subscription-tab-table">
+                            <thead>
+                                <tr>
+                                    <th>Kode</th>
+                                    <th class="text-center">Package</th>
+                                    <th class="text-center">Tipe</th>
+                                    <th class="text-center">Mulai</th>
+                                    <th class="text-center">Berakhir</th>
+                                    <th class="text-center">Grace</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center">Dipakai</th>
+                                    <th class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($data['subscriptions'] as $sub)
+                                    @php $isUsed = isset($data['active_subscription_id']) && $sub->id === $data['active_subscription_id']; @endphp
+                                    <tr class="{{ $isUsed ? 'table-success' : '' }}">
+                                        <td>
+                                            <a href="{{ route('subscription.show', $sub->id) }}" class="text-left">{{ $sub->code ?? '-' }}</a>
+                                        </td>
+                                        <td class="text-center">{{ $sub->package_name ?? '-' }}</td>
+                                        <td class="text-center">
+                                            @if($sub->is_trial === 'trial')
+                                                <span class="badge badge-info">Trial</span>
+                                            @else
+                                                <span class="badge badge-primary">Berbayar</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">{{ $sub->started_at ? date('d-M-Y', strtotime($sub->started_at)) : '-' }}</td>
+                                        <td class="text-center">{{ $sub->expired_at ? date('d-M-Y', strtotime($sub->expired_at)) : '-' }}</td>
+                                        <td class="text-center">
+                                            @if($sub->is_grace === 'grace')
+                                                <span class="badge badge-warning">Grace</span>
+                                            @elseif($sub->is_grace === 'end_grace')
+                                                <span class="badge badge-danger">End Grace</span>
+                                            @else
+                                                <span class="badge badge-success">Active</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-pill badge-{{ $sub->is_active ? 'success' : 'danger' }}">{{ $sub->is_active ? 'Aktif' : 'Nonaktif' }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            @if($isUsed)
+                                                <span class="badge badge-pill badge-success" title="Langganan ini yang aktif dipakai oleh aplikasi (entitlement)">Sedang Dipakai</span>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="{{ route('subscription.show', $sub->id) }}" class="btn btn-sm btn-light" title="Lihat detail">
+                                                <i class="mdi mdi-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="text-center text-muted py-5">
+                        <i class="mdi mdi-package-variant-closed d-block mb-2" style="font-size: 48px;"></i>
+                        <p>Belum ada data langganan untuk customer ini.</p>
+                    </div>
+                @endif
+            </div>{{-- End Langganan Tab --}}
         
         </div>{{-- End Tab Content --}}
 

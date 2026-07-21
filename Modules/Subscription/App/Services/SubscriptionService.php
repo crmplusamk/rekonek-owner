@@ -10,10 +10,6 @@ use Modules\Subscription\App\Models\SubscriptionPackage;
 
 class SubscriptionService
 {
-    /** Fitur AI Credit — addon prepaid (saldo hangus saat lapse penuh, tidak akumulasi lintas lapse). */
-    private const AI_CREDIT_KEY = 'AICRD';
-
-
     public function updatePackage($data)
     {
         $data = SubscriptionPackage::create([
@@ -38,7 +34,15 @@ class SubscriptionService
         return $data;
     }
 
-    public function updateAddon($data)
+    /**
+     * Upsert addon subscription per (customer, company, addon).
+     *
+     * @param bool $isRenewal true bila dari settlement invoice type='renew'. Untuk addon RECURRING
+     *   saat perpanjangan, kapasitas DIPERTAHANKAN (set = charge invoice, tidak digandakan) — hanya
+     *   periode diperpanjang. Addon ONETIME (AI Credit) tetap akumulasi/topup (reset bila lapse
+     *   penuh) baik saat beli maupun renew. Pembelian biasa (non-renewal) selalu akumulasi.
+     */
+    public function updateAddon($data, bool $isRenewal = false)
     {
         $existAddon = SubscriptionAddon::where([
             'customer_id' => $data['customer_id'],
@@ -58,17 +62,28 @@ class SubscriptionService
                 'is_active' => true,
             ]);
         } else {
-            // AI Credit (prepaid): jika addon sebelumnya sudah lapse PENUH (expired melewati jendela
-            // grace), saldo lama hangus — perlakukan pembelian ini sebagai saldo baru (RESET charge &
-            // started_at), bukan akumulasi. Selama masih kontinu (belum expired atau masih dalam
-            // grace), tetap akumulasi seperti addon lain. Ambang selaras extendAiCreditAddonExpiry.
+            $isOneTime = $this->isOneTime($data['addon_id']);
+
+            // ONETIME (prepaid, mis. AI Credit): jika saldo sudah lapse PENUH (expired melewati jendela
+            // grace), saldo lama hangus — perlakukan sebagai saldo baru (RESET). Selama kontinu →
+            // akumulasi. Ambang selaras extendOneTimeAddonExpiry.
             $graceDays = \App\Services\GracePeriod\GraceLifecycleService::GRACE_DURATION_DAYS;
-            $lapsed = $this->isAiCredit($data['addon_id'])
+            $lapsed = $isOneTime
                 && $existAddon->expired_at
                 && Carbon::parse($existAddon->expired_at)->endOfDay()->lt(Carbon::now()->subDays($graceDays));
 
+            if ($isRenewal && !$isOneTime) {
+                // Perpanjangan addon RECURRING: PERTAHANKAN kapasitas (charge invoice renewal =
+                // kapasitas saat ini), JANGAN gandakan. Hanya periode yang diperpanjang.
+                $charge = $data['charge'];
+            } elseif ($lapsed) {
+                $charge = $data['charge']; // ONETIME lapse penuh → reset saldo
+            } else {
+                $charge = $existAddon->charge + $data['charge']; // beli tambah / topup onetime
+            }
+
             $existAddon->update([
-                'charge' => $lapsed ? $data['charge'] : $existAddon->charge + $data['charge'],
+                'charge' => $charge,
                 'started_at' => $data['started_at'],
                 'expired_at' => $data['expired_at'],
                 'is_active' => true,
@@ -79,22 +94,20 @@ class SubscriptionService
     }
 
     /**
-     * Perpanjang expired_at addon AI Credit aktif milik company ke akhir cycle langganan yang baru,
-     * agar saldo prepaid tetap valid (carry-over) di cycle berikutnya. Dipanggil saat settlement
-     * paket (new/renew) yang membuat cycle baru — bila tanpa ini, addon akan expired di tengah
-     * cycle baru dan saldo hilang meski user memperpanjang.
+     * Perpanjang expired_at addon ONETIME (prepaid, mis. AI Credit) aktif milik company ke akhir cycle
+     * langganan yang baru, agar saldo tetap valid (carry-over) di cycle berikutnya. Dipanggil saat
+     * settlement paket (new/renew) — bila tanpa ini, addon akan expired di tengah cycle baru dan
+     * saldo hilang meski user memperpanjang.
      *
      * HANYA memperpanjang addon yang masih kontinu: belum expired, ATAU expired tetapi masih dalam
-     * jendela grace (renewal saat grace). Addon yang sudah lapse penuh (expired > grace) TIDAK
-     * diperpanjang → saldo hangus dan tidak "resurrect" saat company berlangganan lagi dari nol.
+     * jendela grace. Addon yang sudah lapse penuh (expired > grace) TIDAK diperpanjang → saldo hangus
+     * dan tidak "resurrect" saat company berlangganan lagi dari nol.
      */
-    public function extendAiCreditAddonExpiry(string $companyId, $expiredAt): void
+    public function extendOneTimeAddonExpiry(string $companyId, $expiredAt): void
     {
-        $aiCreditAddonIds = Addon::whereHas('feature', function ($q) {
-            $q->where('key', self::AI_CREDIT_KEY);
-        })->pluck('id');
+        $oneTimeAddonIds = Addon::where('billing_type', Addon::BILLING_ONETIME)->pluck('id');
 
-        if ($aiCreditAddonIds->isEmpty()) {
+        if ($oneTimeAddonIds->isEmpty()) {
             return;
         }
 
@@ -102,18 +115,16 @@ class SubscriptionService
         $continuityFloor = Carbon::now()->subDays($graceDays);
 
         SubscriptionAddon::where('company_id', $companyId)
-            ->whereIn('addon_id', $aiCreditAddonIds)
+            ->whereIn('addon_id', $oneTimeAddonIds)
             ->where('is_active', true)
             ->where('expired_at', '>=', $continuityFloor)
             ->update(['expired_at' => $expiredAt]);
     }
 
-    private function isAiCredit($addonId): bool
+    private function isOneTime($addonId): bool
     {
         return Addon::where('id', $addonId)
-            ->whereHas('feature', function ($q) {
-                $q->where('key', self::AI_CREDIT_KEY);
-            })
+            ->where('billing_type', Addon::BILLING_ONETIME)
             ->exists();
     }
 }

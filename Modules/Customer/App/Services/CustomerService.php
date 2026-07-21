@@ -1,13 +1,14 @@
 <?php
 
-namespace Modules\Customer\App\Repositories;
+namespace Modules\Customer\App\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Modules\Customer\App\Models\Customer;
+use Modules\Subscription\App\Models\SubscriptionPackage;
 
-class CustomerRepository
+class CustomerService
 {
     private const SUBSCRIPTION_CONTEXT_ACTIVE = 'active';
     private const SUBSCRIPTION_CONTEXT_GRACE = 'grace';
@@ -318,25 +319,14 @@ class CustomerRepository
         }
 
         $today = now()->toDateString();
-        $subscription = DB::table('subscription_packages')
-            ->where('company_id', $companyId)
-            ->where('is_active', true)
-            ->where('is_grace', self::SUBSCRIPTION_CONTEXT_ACTIVE)
-            ->whereDate('started_at', '<=', $today)
-            ->whereDate('expired_at', '>=', $today)
-            ->orderByDesc('expired_at')
-            ->orderByDesc('started_at')
-            ->orderByDesc('created_at')
-            ->first();
+        // Primary: langganan efektif hari ini (strict) — scope canonical currentEffective.
+        $subscription = SubscriptionPackage::forCompany($companyId)->currentEffective()->first();
         $context = self::SUBSCRIPTION_CONTEXT_ACTIVE;
 
         if (! $subscription) {
-            $subscription = DB::table('subscription_packages')
-                ->where('company_id', $companyId)
-                ->orderByDesc('expired_at')
-                ->orderByDesc('started_at')
-                ->orderByDesc('created_at')
-                ->first();
+            // Fallback tampilan: baris terbaru per company (scope latestFirst) untuk beri label
+            // konteks (grace / berakhir) agar kolom tidak kosong.
+            $subscription = SubscriptionPackage::forCompany($companyId)->latestFirst()->first();
 
             if (! $subscription) {
                 return [

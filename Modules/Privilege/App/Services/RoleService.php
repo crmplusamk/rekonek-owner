@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\Privilege\App\Repositories;
+namespace Modules\Privilege\App\Services;
 
 use Illuminate\Support\Str;
 use Modules\Privilege\App\Models\Role;
 
-class RoleRepository
+class RoleService
 {
 
     public function getList($request = null)

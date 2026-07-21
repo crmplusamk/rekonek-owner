@@ -17,8 +17,8 @@ use Modules\Checkout\App\Http\Controllers\CheckoutApiController;
 
 Route::prefix('v1')->name('api.')->group(function () {
 
-    Route::post('checkout/package', [CheckoutApiController::class, 'packageStore'])->name('checkout.package.store');
-    Route::post('checkout/addon', [CheckoutApiController::class, 'addonStore'])->name('checkout.addon.store');
+    /** checkout terpadu: paket, addon, atau kombinasi (invoice type & gate addon diturunkan server) */
+    Route::post('checkout', [CheckoutApiController::class, 'store'])->name('checkout.store');
 });
 
 /** midtrans route get snap token */

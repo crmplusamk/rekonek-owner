@@ -33,8 +33,18 @@ class GraceLifecycleService
     public const GRACE_DURATION_DAYS = 30;
 
     /**
-     * Cari subscription_packages yang expired_at = kemarin DAN is_grace = 'active'.
-     * Mereka adalah kandidat untuk transisi ke state 'grace' (dispatched oleh EnterGraceCommand).
+     * Lookback window (hari) untuk kandidat enter-grace. >1 membuat command self-healing bila
+     * eksekusi harian terlewat: row yang expired dalam N hari terakhir & masih is_grace='active'
+     * tetap tertangkap, bukan hanya "kemarin persis". Aman karena filter is_grace='active' (row yang
+     * sudah masuk grace tak akan terpilih lagi) + whereNotExists currentEffective (yang sudah
+     * perpanjang dikecualikan) → hanya menangkap row yang benar-benar terlewat.
+     */
+    public const ENTER_GRACE_LOOKBACK_DAYS = 2;
+
+    /**
+     * Cari subscription_packages yang expired_at dalam ENTER_GRACE_LOOKBACK_DAYS hari terakhir
+     * (mis. 2 hari: kemarin & sehari sebelumnya) DAN is_grace = 'active'. Mereka adalah kandidat
+     * transisi ke state 'grace' (dispatched oleh EnterGraceCommand).
      */
     public function findEnterGraceCandidates(
         ?Carbon $today = null,
@@ -42,11 +52,13 @@ class GraceLifecycleService
     ): Collection {
         $today = $today ? $today->copy()->startOfDay() : Carbon::today();
         $yesterday = $today->copy()->subDay()->toDateString();
+        $lookbackFrom = $today->copy()->subDays(self::ENTER_GRACE_LOOKBACK_DAYS)->toDateString();
 
         $query = DB::table('subscription_packages as sp')
             ->join('packages as p', 'p.id', '=', 'sp.package_id')
             ->join('contacts as c', 'c.id', '=', 'sp.customer_id')
-            ->whereDate('sp.expired_at', $yesterday)
+            ->whereDate('sp.expired_at', '>=', $lookbackFrom)
+            ->whereDate('sp.expired_at', '<=', $yesterday)
             ->where('sp.is_grace', self::STATE_ACTIVE)
             ->whereNotExists(function ($subQuery) use ($today) {
                 $subQuery->select(DB::raw(1))
