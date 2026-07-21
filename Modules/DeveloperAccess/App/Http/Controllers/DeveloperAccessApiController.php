@@ -5,16 +5,16 @@ namespace Modules\DeveloperAccess\App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Modules\DeveloperAccess\App\Repositories\DeveloperAccessRepository;
+use Modules\DeveloperAccess\App\Services\DeveloperAccessService;
 
 class DeveloperAccessApiController extends Controller
 {
 
-    public $developerAccessRepo;
+    public $developerAccessService;
 
-    public function __construct(DeveloperAccessRepository $developerAccessRepo)
+    public function __construct(DeveloperAccessService $developerAccessService)
     {
-        $this->developerAccessRepo = $developerAccessRepo;
+        $this->developerAccessService = $developerAccessService;
     }
 
     /**
@@ -23,7 +23,7 @@ class DeveloperAccessApiController extends Controller
     public function getUsers(Request $request)
     {
         try {
-            $users = $this->developerAccessRepo->getClientUsersForSelect();
+            $users = $this->developerAccessService->getClientUsersForSelect();
 
             return response()->json([
                 'success' => true,
@@ -48,7 +48,7 @@ class DeveloperAccessApiController extends Controller
         DB::beginTransaction();
         try {
 
-            $access = $this->developerAccessRepo->destroyBulkByToken($request->all());
+            $access = $this->developerAccessService->destroyBulkByToken($request->all());
 
             DB::commit();
             return response()->json([

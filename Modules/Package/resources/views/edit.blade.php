@@ -141,7 +141,7 @@
         </div>
     </div>
 
-    <div class="text-right mb-4">
+    <div class="text-right mt-4 mb-4">
         <a href="{{ route('package.index') }}" class="btn btn-light">Batal</a>
         <button type="submit" class="btn btn-primary">Simpan</button>
     </div>
@@ -170,21 +170,17 @@
             </div>
             <form action="{{ route('package.push-rules', $package->id) }}" method="post">
                 @csrf
-                <div class="modal-body">
+                <div class="modal-body pt-4">
                     <p class="text-muted" style="font-size:.85rem">
                         Aturan <strong>{{ $package->name }}</strong> saat ini akan menimpa snapshot pelanggan terpilih.
                         Baris yang diedit manual (<code>manual</code>) dilewati kecuali dicentang di bawah.
                     </p>
                     <div class="form-group">
-                        <label class="d-block font-weight-bold">Cakupan</label>
-                        <div class="custom-control custom-radio">
-                            <input type="radio" id="scope-all" name="scope" value="all" class="custom-control-input" checked>
-                            <label class="custom-control-label" for="scope-all">Semua pelanggan aktif (<span id="subCount">…</span>)</label>
-                        </div>
-                        <div class="custom-control custom-radio mt-1">
-                            <input type="radio" id="scope-selected" name="scope" value="selected" class="custom-control-input">
-                            <label class="custom-control-label" for="scope-selected">Pilih pelanggan tertentu</label>
-                        </div>
+                        <label class="font-weight-bold">Cakupan</label>
+                        <select name="scope" id="scope" class="form-control">
+                            <option value="all">Semua pelanggan aktif (…)</option>
+                            <option value="selected">Pilih pelanggan tertentu</option>
+                        </select>
                     </div>
                     <div class="form-group d-none" id="subPickerWrap">
                         <label>Pelanggan</label>
@@ -322,6 +318,7 @@
     $(function () {
         $.get("{{ route('package.subscribers', $package->id) }}", function (res) {
             $('#subCount').text(res.count + ' pelanggan');
+            $('#scope option[value="all"]').text('Semua pelanggan aktif (' + res.count + ' pelanggan)');
             $('#subPicker').select2({
                 placeholder: 'Pilih pelanggan',
                 dropdownParent: $('#pushRulesModal'),
@@ -329,8 +326,8 @@
             });
         });
 
-        $('input[name="scope"]').on('change', function () {
-            $('#subPickerWrap').toggleClass('d-none', this.value !== 'selected');
+        $('#scope').on('change', function () {
+            $('#subPickerWrap').toggleClass('d-none', $(this).val() !== 'selected');
         });
     });
 

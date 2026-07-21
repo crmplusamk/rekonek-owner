@@ -7,15 +7,15 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Modules\AiCreditUsage\App\Repositories\AiCreditUsageReportRepository;
+use Modules\AiCreditUsage\App\Services\AiCreditUsageReportService;
 
 class AiCreditUsageController extends Controller
 {
-    public $reportRepo;
+    public $reportService;
 
-    public function __construct(AiCreditUsageReportRepository $reportRepo)
+    public function __construct(AiCreditUsageReportService $reportService)
     {
-        $this->reportRepo = $reportRepo;
+        $this->reportService = $reportService;
     }
 
     /**
@@ -38,9 +38,9 @@ class AiCreditUsageController extends Controller
                 'start' => $start->toDateString(),
                 'end' => $end->toDateString(),
             ],
-            'summary' => $this->reportRepo->summary($start, $end),
-            'features' => $this->reportRepo->featureBreakdown($start, $end),
-            'trend' => $this->reportRepo->dailyTrend($start, $end),
+            'summary' => $this->reportService->summary($start, $end),
+            'features' => $this->reportService->featureBreakdown($start, $end),
+            'trend' => $this->reportService->dailyTrend($start, $end),
         ]);
     }
 
@@ -51,7 +51,7 @@ class AiCreditUsageController extends Controller
     {
         [$start, $end] = $this->resolveRange($request);
 
-        $rows = $this->reportRepo->perCompany($start, $end, $request->input('search') ?: null);
+        $rows = $this->reportService->perCompany($start, $end, $request->input('search') ?: null);
 
         return datatables()->collection($rows)->make(true);
     }
@@ -63,7 +63,7 @@ class AiCreditUsageController extends Controller
     {
         return view('aicreditusage::show', [
             'companyId' => $company,
-            'companyName' => $this->reportRepo->companyName($company) ?: '—',
+            'companyName' => $this->reportService->companyName($company) ?: '—',
         ]);
     }
 
@@ -79,9 +79,9 @@ class AiCreditUsageController extends Controller
                 'start' => $start->toDateString(),
                 'end' => $end->toDateString(),
             ],
-            'summary' => $this->reportRepo->summary($start, $end, $company),
-            'features' => $this->reportRepo->featureBreakdown($start, $end, $company),
-            'trend' => $this->reportRepo->dailyTrend($start, $end, $company),
+            'summary' => $this->reportService->summary($start, $end, $company),
+            'features' => $this->reportService->featureBreakdown($start, $end, $company),
+            'trend' => $this->reportService->dailyTrend($start, $end, $company),
         ]);
     }
 
@@ -92,7 +92,7 @@ class AiCreditUsageController extends Controller
     {
         [$start, $end] = $this->resolveRange($request);
 
-        $query = $this->reportRepo->responses($start, $end, $company);
+        $query = $this->reportService->responses($start, $end, $company);
 
         return datatables()->query($query)
             ->orderColumn('total_tokens', '(COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0)) $1')
@@ -105,8 +105,8 @@ class AiCreditUsageController extends Controller
      */
     public function reset(Request $request, string $company)
     {
-        [$start, $end] = $this->reportRepo->currentCycleWindow($company);
-        $used = $this->reportRepo->cycleCreditsUsed($company, $start, $end);
+        [$start, $end] = $this->reportService->currentCycleWindow($company);
+        $used = $this->reportService->cycleCreditsUsed($company, $start, $end);
 
         if ($used === 0) {
             notify()->info('Tidak ada credit terpakai pada cycle berjalan — tidak ada yang perlu direset.');
@@ -114,7 +114,7 @@ class AiCreditUsageController extends Controller
             return back();
         }
 
-        $this->reportRepo->recordAdjustment(
+        $this->reportService->recordAdjustment(
             $company,
             -$used, // offset → SUM cycle = 0 → sisa penuh
             'admin_reset',
@@ -144,7 +144,7 @@ class AiCreditUsageController extends Controller
             ? -$validated['amount']
             : $validated['amount'];
 
-        $this->reportRepo->recordAdjustment(
+        $this->reportService->recordAdjustment(
             $company,
             $signed,
             'admin_adjustment',

@@ -70,4 +70,19 @@ class SubscriptionPackage extends Model
             ->effectiveOn($date)
             ->latestFirst();
     }
+
+    /**
+     * SUMBER KEBENARAN "langganan yang DIPAKAI" untuk sebuah company — dipadankan dengan resolver
+     * entitlement rekonek-app (SubscriptionService::getAuthData): ambil row `is_active=true` dengan
+     * `expired_at` TERJAUH. Tie-break started_at & created_at (via latestFirst) agar deterministik;
+     * app hanya urut expired_at desc, jadi row pertama selalu sama.
+     *
+     * Gunakan scope INI untuk menandai/menentukan langganan aktif yang benar-benar dipakai app.
+     * BEDAKAN dengan scopeCurrentEffective yang LEBIH KETAT (+ grace='active' + berlaku hari ini) —
+     * itu untuk logika billing/grace "efektif hari ini", BUKAN untuk "yang dipakai app".
+     */
+    public function scopeActiveResolved(Builder $query): Builder
+    {
+        return $query->validRecord()->latestFirst();
+    }
 }

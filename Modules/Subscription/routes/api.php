@@ -13,3 +13,11 @@ use Illuminate\Support\Facades\Route;
     | is assigned the "api" middleware group. Enjoy building your API!
     |
 */
+
+use Modules\Subscription\App\Http\Controllers\SubscriptionApiController;
+
+Route::prefix('v1')->name('api.')->group(function () {
+    /** proyeksi tagihan perpanjangan (sumber kebenaran "Nilai Langganan" di app) */
+    Route::get('subscription/{companyId}/renewal-quote', [SubscriptionApiController::class, 'renewalQuote'])
+        ->name('subscription.renewal-quote');
+});

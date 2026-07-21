@@ -10,15 +10,16 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Modules\Customer\App\Http\Requests\CustomerCreateRequest;
 use Modules\Customer\App\Http\Requests\CustomerUpdateRequest;
-use Modules\Customer\App\Repositories\CustomerRepository;
+use Modules\Customer\App\Services\CustomerService;
+use Modules\Subscription\App\Models\SubscriptionPackage;
 
 class CustomerController extends Controller
 {
-    public $customerRepo;
+    public $customerService;
 
-    public function __construct(CustomerRepository $customerRepo)
+    public function __construct(CustomerService $customerService)
     {
-        $this->customerRepo = $customerRepo;
+        $this->customerService = $customerService;
     }
     /**
      * Display a listing of the resource.
@@ -46,7 +47,7 @@ class CustomerController extends Controller
 
     public function list(Request $request)
     {
-        return $this->customerRepo->list($request->all());
+        return $this->customerService->list($request->all());
     }
 
     /**
@@ -57,7 +58,7 @@ class CustomerController extends Controller
         DB::beginTransaction();
         try {
 
-            $this->customerRepo->create($request->all());
+            $this->customerService->create($request->all());
 
             DB::commit();
             notify()->success("Berhasil membuat data customer");
@@ -78,7 +79,7 @@ class CustomerController extends Controller
     {
         try {
             // Get customer data from backoffice database
-            $customer = $this->customerRepo->detail($id);
+            $customer = $this->customerService->detail($id);
             
             if (!$customer->company_id) {
                 notify()->error("Customer tidak memiliki company_id yang valid.");
@@ -208,22 +209,40 @@ class CustomerController extends Controller
                 ->select('name', 'last_login_at', 'last_activity')
                 ->get();
             
-            // Get subscription data from backoffice database by company_id
+            // Dua konsep berbeda, masing-masing punya scope canonical (single source of truth):
+            // - Header/status subscriber: currentEffective (strict, "efektif hari ini") — konsisten
+            //   dengan kolom langganan di list customer (CustomerService::resolveSubscriptionForCompany).
+            // - Badge "Sedang Dipakai": activeResolved (langganan yang benar-benar dipakai app/entitlement,
+            //   dipadankan resolver rekonek-app: is_active=true + expired_at terjauh). Dipakai untuk
+            //   menandai baris di tab Langganan agar tidak rancu dgn urutan daftar (created_at desc).
             $subscription = null;
+            $activeSubscriptionId = null;
             if ($customer->company_id) {
-                $today = now()->toDateString();
-                $subscription = DB::table('subscription_packages')
-                    ->where('company_id', $customer->company_id)
-                    ->where('is_active', true)
-                    ->where('is_grace', 'active')
-                    ->whereDate('started_at', '<=', $today)
-                    ->whereDate('expired_at', '>=', $today)
-                    ->orderByDesc('expired_at')
-                    ->orderByDesc('started_at')
-                    ->orderByDesc('created_at')
-                    ->first();
+                $subscription = SubscriptionPackage::forCompany($customer->company_id)->currentEffective()->first();
+                $activeSubscriptionId = SubscriptionPackage::forCompany($customer->company_id)->activeResolved()->value('id');
             }
             
+            // Get all subscriptions for this company (for Langganan tab)
+            $subscriptions = collect();
+            if ($customer->company_id) {
+                $subscriptions = DB::table('subscription_packages')
+                    ->leftJoin('packages', 'subscription_packages.package_id', '=', 'packages.id')
+                    ->where('subscription_packages.company_id', $customer->company_id)
+                    ->select(
+                        'subscription_packages.id',
+                        'subscription_packages.code',
+                        'subscription_packages.started_at',
+                        'subscription_packages.expired_at',
+                        'subscription_packages.is_active',
+                        'subscription_packages.is_trial',
+                        'subscription_packages.is_grace',
+                        'subscription_packages.created_at',
+                        'packages.name as package_name',
+                    )
+                    ->orderByDesc('subscription_packages.created_at')
+                    ->get();
+            }
+
             // Get invoices data from backoffice database
             $invoices = DB::table('invoices')
                 ->where('customer_id', $id)
@@ -332,7 +351,9 @@ class CustomerController extends Controller
                 'access_logs' => $accessLogs,
                 'invoices' => $invoices,
                 'onboarding' => $onboardingData,
-                'subscription' => $subscription
+                'subscription' => $subscription,
+                'subscriptions' => $subscriptions,
+                'active_subscription_id' => $activeSubscriptionId,
             ];
             
             return view('customer::show', compact('data'));
@@ -350,7 +371,7 @@ class CustomerController extends Controller
     {
         try {
 
-            $data =  $this->customerRepo->detail($id);
+            $data =  $this->customerService->detail($id);
             return view('customer::edit', compact('data'));
 
         } catch (\Exception $e) {
@@ -367,10 +388,10 @@ class CustomerController extends Controller
     {
         try {
 
-            $this->customerRepo->update($request->all(), $id);
+            $this->customerService->update($request->all(), $id);
 
             notify()->success("Berhasil mengubah data customer");
-            return to_route('customer.index');
+            return to_route('customer.edit', $id);
 
         } catch (\Exception $e) {
 
@@ -387,7 +408,7 @@ class CustomerController extends Controller
     {
         try {
 
-            $user = $this->customerRepo->delete($id);
+            $user = $this->customerService->delete($id);
 
             if ($user != 403) {
                 notify()->success("Berhasil menghapus data customer");
@@ -408,7 +429,7 @@ class CustomerController extends Controller
     {
         try {
 
-            $this->customerRepo->status($id);
+            $this->customerService->status($id);
 
             notify()->success("Berhasil mengubah data customer");
             return to_route('customer.index');
@@ -422,7 +443,7 @@ class CustomerController extends Controller
 
     public function datatable(Request $request)
     {
-        return $this->customerRepo->datatable();
+        return $this->customerService->datatable();
     }
 
     /**
@@ -488,7 +509,7 @@ class CustomerController extends Controller
     public function purgeData(Request $request, $id)
     {
         try {
-            $customer = $this->customerRepo->detail($id);
+            $customer = $this->customerService->detail($id);
 
             if (!$customer->company_id) {
                 notify()->error("Customer tidak memiliki company_id yang valid.");

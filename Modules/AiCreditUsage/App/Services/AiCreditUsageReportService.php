@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\AiCreditUsage\App\Repositories;
+namespace Modules\AiCreditUsage\App\Services;
 
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
  * aggregation methods — pass `$companyId` to scope them to one organisation.
  * All metrics are raw usage (tokens + credits).
  */
-class AiCreditUsageReportRepository
+class AiCreditUsageReportService
 {
     private const CONNECTION = 'client';
 

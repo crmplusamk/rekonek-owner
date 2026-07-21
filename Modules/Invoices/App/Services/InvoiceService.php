@@ -1,13 +1,17 @@
 <?php
 
-namespace Modules\Invoices\App\Repositories;
+namespace Modules\Invoices\App\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Modules\Invoices\App\Models\Invoice;
 use Modules\Customer\App\Models\Customer;
 
-class InvoiceRepository
+/**
+ * Operasi invoice (service pattern). Dipakai lintas module oleh
+ * Checkout (buat/cari/update invoice) dan GenerateRenewalInvoiceJob (buat invoice perpanjangan).
+ */
+class InvoiceService
 {
 
     public function create($request)
@@ -91,7 +95,7 @@ class InvoiceRepository
         return $data;
     }
 
-    function getByCompanyId($request)
+    public function getByCompanyId($request)
     {
         $data = Invoice::where("company_id", $request['company_id'])
             ->with('items.itemable', 'payments')
@@ -101,7 +105,7 @@ class InvoiceRepository
         return $data;
     }
 
-    function findById($id)
+    public function findById($id)
     {
         $data = Invoice::with([
                 'items.itemable',
@@ -115,7 +119,7 @@ class InvoiceRepository
         return $data;
     }
 
-    function findUnpaidById($id)
+    public function findUnpaidById($id)
     {
         $data = Invoice::with([
                 'items.itemable',
@@ -133,7 +137,7 @@ class InvoiceRepository
         return $data;
     }
 
-    function findByCode($id)
+    public function findByCode($id)
     {
         $data = Invoice::with([
                 "payments",
@@ -149,14 +153,14 @@ class InvoiceRepository
         return $data;
     }
 
-    function countUnpaidByCompanyId($companyId)
+    public function countUnpaidByCompanyId($companyId)
     {
         return Invoice::where("company_id", $companyId)
             ->where("is_paid", 0)
             ->count();
     }
 
-    function update($invoice, $data)
+    public function update($invoice, $data)
     {
         $invoice->update($data);
     }

@@ -17,6 +17,12 @@ class AddonCrudService
         return Feature::where('is_addon', true)->get();
     }
 
+    /** Ambil addon master by id (dipakai lintas module oleh Checkout). */
+    public function getById($id): ?Addon
+    {
+        return Addon::find($id);
+    }
+
     public function create(array $data): Addon
     {
         return Addon::create([
@@ -24,6 +30,7 @@ class AddonCrudService
             'name' => $data['name'],
             'charge' => $data['charge'],
             'price' => $data['price'],
+            'billing_type' => $data['billing_type'] ?? 'recurring',
             'description' => $data['description'] ?? null,
             'quantity' => $data['quantity'] ?? 1,
             'is_active' => true,
@@ -37,6 +44,7 @@ class AddonCrudService
             'name' => $data['name'],
             'charge' => $data['charge'],
             'price' => $data['price'],
+            'billing_type' => $data['billing_type'] ?? $addon->billing_type ?? 'recurring',
             'description' => $data['description'] ?? null,
         ]);
         return $addon;

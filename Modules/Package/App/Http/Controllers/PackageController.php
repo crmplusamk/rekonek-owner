@@ -92,7 +92,7 @@ class PackageController extends Controller
             ReconcilePackageFeatureRulesJob::dispatch($id);
 
             notify()->success('Berhasil mengubah data package');
-            return to_route('package.index');
+            return to_route('package.edit', $id);
         } catch (\Exception $e) {
             notify()->error('Terjadi kesalahan. ' . $e->getMessage());
             return back()->withInput();

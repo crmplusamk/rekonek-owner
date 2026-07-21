@@ -6,14 +6,14 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Modules\DeveloperAccess\App\Models\DeveloperAccess;
-use Modules\DeveloperAccess\App\Repositories\DeveloperAccessRepository;
+use Modules\DeveloperAccess\App\Services\DeveloperAccessService;
 
 class DeveloperAccessController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index(DeveloperAccessRepository $developerAccessRepository)
+    public function index(DeveloperAccessService $developerAccessService)
     {
         $now = now();
         $access = DeveloperAccess::get();
@@ -21,7 +21,7 @@ class DeveloperAccessController extends Controller
         $count_inactive = DeveloperAccess::where("end_date", '<', $now)->count();
 
         try {
-            $crmUsers = $developerAccessRepository->getClientUsersForSelect();
+            $crmUsers = $developerAccessService->getClientUsersForSelect();
         } catch (\Throwable $e) {
             $crmUsers = new Collection();
         }
@@ -37,7 +37,7 @@ class DeveloperAccessController extends Controller
     /**
      * Simpan token akses developer (DB default backoffice).
      */
-    public function store(Request $request, DeveloperAccessRepository $developerAccessRepository)
+    public function store(Request $request, DeveloperAccessService $developerAccessService)
     {
         $request->validate([
             'user_id' => 'required|uuid',
@@ -46,7 +46,7 @@ class DeveloperAccessController extends Controller
         ]);
 
         try {
-            $developerAccessRepository->create($request->only(['user_id', 'time_access', 'note']));
+            $developerAccessService->create($request->only(['user_id', 'time_access', 'note']));
             notify()->success('Berhasil membuat akses developer');
         } catch (\Throwable $e) {
             notify()->error('Gagal menyimpan: ' . $e->getMessage());
@@ -58,7 +58,7 @@ class DeveloperAccessController extends Controller
     /**
      * Hapus satu atau banyak akses developer (by id).
      */
-    public function destroy(Request $request, DeveloperAccessRepository $developerAccessRepository)
+    public function destroy(Request $request, DeveloperAccessService $developerAccessService)
     {
         $request->validate([
             'ids' => 'required|array|min:1',
@@ -66,7 +66,7 @@ class DeveloperAccessController extends Controller
         ]);
 
         try {
-            $deleted = $developerAccessRepository->destroyBulk(ids: $request->input('ids', []));
+            $deleted = $developerAccessService->destroyBulk(ids: $request->input('ids', []));
 
             if ($deleted === 0) {
                 notify()->warning('Tidak ada data yang dihapus');

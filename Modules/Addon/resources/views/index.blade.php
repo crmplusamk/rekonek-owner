@@ -101,6 +101,14 @@
                         <input name="price" type="number" class="form-control" placeholder="Masukan harga addon" value="{{ old('price') }}" required>
                     </div>
                     <div class="form-group">
+                        <label>Tipe Billing <span class="text-danger">*</span></label>
+                        <select name="billing_type" class="form-control" required>
+                            <option value="recurring" {{ old('billing_type', 'recurring') === 'recurring' ? 'selected' : '' }}>Recurring (prorata, ikut paket)</option>
+                            <option value="onetime" {{ old('billing_type') === 'onetime' ? 'selected' : '' }}>Sekali beli / prepaid (AI Credit)</option>
+                        </select>
+                        <small class="form-text text-muted">Recurring: harga prorata & co-terminous paket, kapasitas dipertahankan saat renew. Onetime: harga penuh, saldo carry-over & akumulasi.</small>
+                    </div>
+                    <div class="form-group">
                         <label>Deskripsi</label>
                         <textarea name="description" class="form-control" rows="3">{{ old('description') }}</textarea>
                     </div>

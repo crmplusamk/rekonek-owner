@@ -305,16 +305,16 @@ $(document).ready(function() {
             $('#discount_percentage_field_' + p).removeClass('d-none');
             $('#discount_amount_field_' + p).addClass('d-none');
             $('#max_discount_container_' + p).removeClass('d-none');
-            $('input[name="discount_percentage_' + p + '"]').prop('required', true);
-            $('input[name="discount_amount_' + p + '"]').prop('required', false);
+            $('input[name="discount_percentage_' + p + '"]').prop('required', true).prop('disabled', false);
+            $('input[name="discount_amount_' + p + '"]').prop('required', false).prop('disabled', true).val('');
             $('#label_percent_' + p).removeClass('btn-outline-primary').addClass('btn-primary');
             $('#label_nominal_' + p).removeClass('btn-primary').addClass('btn-outline-primary');
         } else {
             $('#discount_percentage_field_' + p).addClass('d-none');
             $('#discount_amount_field_' + p).removeClass('d-none');
             $('#max_discount_container_' + p).addClass('d-none');
-            $('input[name="discount_percentage_' + p + '"]').prop('required', false);
-            $('input[name="discount_amount_' + p + '"]').prop('required', true);
+            $('input[name="discount_percentage_' + p + '"]').prop('required', false).prop('disabled', true).val('');
+            $('input[name="discount_amount_' + p + '"]').prop('required', true).prop('disabled', false);
             $('#label_percent_' + p).removeClass('btn-primary').addClass('btn-outline-primary');
             $('#label_nominal_' + p).removeClass('btn-outline-primary').addClass('btn-primary');
         }

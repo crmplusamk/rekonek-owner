@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Announcement\App\Repositories;
+namespace Modules\Announcement\App\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -8,7 +8,7 @@ use Modules\Announcement\App\Models\Announcement;
 use Modules\Announcement\App\Models\AnnouncementTarget;
 use Modules\Customer\App\Models\Customer;
 
-class AnnouncementRepository
+class AnnouncementService
 {
     public function getById(string $id): Announcement
     {

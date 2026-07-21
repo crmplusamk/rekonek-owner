@@ -1,11 +1,15 @@
 <?php
 
-namespace Modules\Payment\App\Repositories;
+namespace Modules\Payment\App\Services;
 
 use Illuminate\Support\Str;
 use Modules\Payment\App\Models\Payment;
 
-class PaymentRepository
+/**
+ * Operasi payment (service pattern). Dipakai lintas module oleh
+ * Checkout (buat/cari/update payment Midtrans).
+ */
+class PaymentService
 {
     public function create($request)
     {
