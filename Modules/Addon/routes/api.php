@@ -13,3 +13,10 @@ use Illuminate\Support\Facades\Route;
     | is assigned the "api" middleware group. Enjoy building your API!
     |
 */
+
+use Modules\Addon\App\Http\Controllers\AddonPriceApiController;
+
+Route::prefix('v1')->name('api.')->group(function () {
+    /** quote harga addon (normal vs diskon tier) untuk ditampilkan app */
+    Route::get('addon-price', [AddonPriceApiController::class, 'price'])->name('addon.price');
+});

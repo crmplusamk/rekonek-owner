@@ -35,7 +35,7 @@ class CheckoutRequest extends FormRequest
             'items.*.type' => ['required', 'in:package,addon'],
             'items.*.id' => ['required', 'string'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.termin' => ['required', 'in:month,year'],
+            'items.*.termin' => ['required', 'in:day,month,year'],
             'items.*.price' => ['required', 'numeric', 'min:0'],
             'items.*.duration' => ['nullable', 'integer', 'min:1'],
             'items.*.duration_type' => ['nullable', 'in:day,month,year'],
